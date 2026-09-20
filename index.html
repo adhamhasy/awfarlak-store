@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supermarket Store</title>
-    <!-- Favicon fix to prevent 404 errors -->
+    <title data-i18n="title">Supermarket Store</title>
     <link rel="icon" href="data:,">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,74 +11,134 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .bg-light, 
+        body.dark-mode .bg-white {
+            background-color: #1e1e1e !important;
+            color: #e0e0e0 !important;
+        }
+        body.dark-mode .text-dark {
+            color: #f8f9fa !important;
+        }
+        body.dark-mode .navbar, 
+        body.dark-mode header {
+            border-bottom: 1px solid #333 !important;
+        }
+        body.dark-mode .border-top, 
+        body.dark-mode .border-bottom {
+            border-color: #333 !important;
+        }
+        body.dark-mode .modal-content {
+            background-color: #242424 !important;
+            color: #ffffff !important;
+        }
+        body.dark-mode .form-control,
+        body.dark-mode .form-select,
+        body.dark-mode .input-group-text {
+            background-color: #333 !important;
+            color: #fff !important;
+            border-color: #444 !important;
+        }
+        body.dark-mode .form-control::placeholder {
+            color: #aaa !important;
+        }
+        body.dark-mode .btn-outline-dark {
+            color: #fff;
+            border-color: #fff;
+        }
+        body.dark-mode .btn-outline-dark:hover {
+            background-color: #fff;
+            color: #000;
+        }
+        body.dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        body.dark-mode .text-muted {
+            color: #a0a0a0 !important;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-    <!-- Amazon-Style Clean White Header -->
+    <!-- Header -->
     <header class="sticky-top bg-white border-bottom shadow-sm">
-        <nav class="navbar navbar-expand-lg navbar-light bg-white container-fluid px-3">
-            <a class="navbar-brand fw-bold text-uppercase tracking-wider text-dark me-3" href="#">
-                Supermarket
-            </a>
-            
-            <!-- Delivery Location Indicator -->
-            <div class="d-none d-md-flex align-items-center me-3 text-dark" style="font-size: 0.85rem;" onclick="window.openCheckout()" role="button">
-                <svg width="18" height="18" fill="currentColor" class="me-1 text-primary" viewBox="0 0 16 16">
-                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/>
-                </svg>
-                <div>
-                    <div class="text-muted lh-1" style="font-size: 0.7rem;">Deliver to</div>
-                    <div class="fw-bold lh-1">Select Delivery Spot</div>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white container-fluid px-3 py-2">
+            <div class="container-fluid p-0 d-flex flex-column gap-2">
+                
+                <!-- Top Row: Brand, Delivery, and All Actions -->
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    
+                    <!-- Brand & Delivery (Left) -->
+                    <div class="d-flex align-items-center gap-3">
+                        <a class="navbar-brand fw-bold text-uppercase tracking-wider text-dark m-0" href="#" data-i18n="brand">
+                            Supermarket
+                        </a>
+                        
+                        <div class="d-none d-md-flex align-items-center text-dark" style="font-size: 0.85rem; cursor: pointer;" onclick="window.openCheckout()">
+                            <svg width="18" height="18" fill="currentColor" class="me-1 text-primary" viewBox="0 0 16 16">
+                                <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/>
+                            </svg>
+                            <div>
+                                <div class="text-muted lh-1" style="font-size: 0.7rem;" data-i18n="deliverTo">Deliver to</div>
+                                <div class="fw-bold lh-1" data-i18n="selectSpot">Select Delivery Spot</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Controls (Right) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- EN/AR Translation Toggle -->
+                        <button class="btn btn-outline-secondary btn-sm fw-bold rounded-pill" id="langToggle">عربي</button>
+                        
+                        <!-- Dark Mode Toggle -->
+                        <button class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" id="darkModeToggle" style="width: 32px; height: 32px;">
+                            <svg id="moonIcon" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/>
+                            </svg>
+                        </button>
+
+                        <!-- Sort & Filter Icons -->
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-outline-dark btn-sm rounded-pill d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#sortModal">
+                                <span class="d-none d-md-inline" data-i18n="sort">Sort</span>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L3.5 11.293zm4 0a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h5a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h3a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h1a.5.5 0 0 1 0 1z"/></svg>
+                            </button>
+                            <button class="btn btn-outline-dark btn-sm rounded-pill d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#filterModal">
+                                <span class="d-none d-md-inline" data-i18n="filter">Filter</span>
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5zm1 .5v1.308l4.372 4.858A.5.5 0 0 1 7 8.5v5.306l2-.666V8.5a.5.5 0 0 1 .128-.334L13.5 3.308V2z"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- Wishlist -->
+                        <button class="btn btn-link text-dark position-relative p-1" onclick="window.openWishlistModal()">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/></svg>
+                            <span id="wishlist-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+                        </button>
+
+                        <!-- Cart Bag -->
+                        <button class="btn btn-dark rounded-pill px-3 fw-bold d-flex align-items-center gap-2" onclick="window.openCheckout()">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a2.5 2.5 0 0 0-2.5 2.5V4h5v-.5A2.5 2.5 0 0 0 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>
+                            <span id="cart-count" class="badge bg-primary text-white rounded-circle">0</span>
+                        </button>
+                    </div>
+
                 </div>
-            </div>
 
-            <!-- Main Search Bar -->
-            <div class="flex-grow-1 mx-lg-3 my-2 my-lg-0">
-                <div class="input-group">
-                    <input type="text" id="searchInput" class="form-control bg-light border-1 rounded-start-pill ps-3" placeholder="Search products, brands, essentials..." aria-label="Search">
-                    <button class="btn btn-dark rounded-end-pill px-3 d-flex align-items-center" type="button" onclick="window.filterAndSortProducts()">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Action Navigation Icons -->
-            <div class="d-flex align-items-center gap-3 ms-auto">
-                <!-- Sort Trigger -->
-                <button class="btn btn-outline-dark btn-sm rounded-pill d-flex align-items-center gap-1 position-relative" data-bs-toggle="modal" data-bs-target="#sortModal">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L3.5 11.293zm4 0a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h5a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h3a.5.5 0 0 1 0 1zm0 3a.5.5 0 0 1 0-1h1a.5.5 0 0 1 0 1z"/>
-                    </svg>
-                    <span class="d-none d-sm-inline">Sort</span>
-                    <span id="sort-badge" class="badge bg-primary text-white rounded-circle" style="display:none;">•</span>
-                </button>
-
-                <!-- Filter Modal Trigger -->
-                <button class="btn btn-outline-dark btn-sm rounded-pill d-flex align-items-center gap-1 position-relative" data-bs-toggle="modal" data-bs-target="#filterModal">
-                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5zm1 .5v1.308l4.372 4.858A.5.5 0 0 1 7 8.5v5.306l2-.666V8.5a.5.5 0 0 1 .128-.334L13.5 3.308V2z"/>
-                    </svg>
-                    <span class="d-none d-sm-inline">Filter</span>
-                    <span id="filter-badge" class="badge bg-primary text-white rounded-pill" style="display:none;">0</span>
-                </button>
-
-                <!-- Wishlist -->
-                <button class="btn btn-link text-dark position-relative p-1" onclick="window.openWishlistModal()">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/>
-                    </svg>
-                    <span id="wishlist-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
-                </button>
-
-                <!-- Cart Bag -->
-                <button class="btn btn-dark rounded-pill px-3 fw-bold d-flex align-items-center gap-2" onclick="window.openCheckout()">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 1a2.5 2.5 0 0 0-2.5 2.5V4h5v-.5A2.5 2.5 0 0 0 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
-                    </svg>
-                    <span id="cart-count" class="badge bg-primary text-white rounded-circle">0</span>
-                </button>
+                <!-- Bottom Row: Dedicated Full-Width Search Bar (Flexbox Fix for RTL/LTR) -->
+<div class="w-100">
+    <div class="d-flex align-items-stretch w-100 shadow-sm rounded-pill bg-light border" style="overflow: hidden;">
+        <input type="text" id="searchInput" class="form-control bg-transparent border-0 shadow-none px-4 translatable-placeholder" placeholder="Search products, brands, essentials..." aria-label="Search" style="outline: none !important; box-shadow: none !important;">
+        <button class="btn btn-dark px-4 rounded-0 d-flex align-items-center justify-content-center border-0" type="button" onclick="window.filterAndSortProducts()" style="background-color: #212529;">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+        </button>
+    </div>
+</div>
             </div>
         </nav>
 
@@ -95,270 +154,186 @@
         <!-- Hero Banner Carousel -->
         <div id="heroCarousel" class="carousel slide rounded-4 overflow-hidden mb-4 shadow-sm" data-bs-ride="carousel">
             <div class="carousel-inner">
-                <div class="carousel-item active bg-dark text-white p-5 text-center text-md-start" style="min-height: 200px; background: linear-gradient(135deg, #0f172a, #334155);">
+                <div class="carousel-item active bg-dark text-white p-4 p-md-5 text-center text-md-start" style="min-height: 200px; background: linear-gradient(135deg, #0f172a, #334155);">
                     <div class="row align-items-center">
                         <div class="col-md-8">
-                            <span class="badge bg-light text-dark mb-2">Daily Supermarket Deals</span>
-                            <h2 class="fw-bold">Your Everyday Pantry & Grocery Store</h2>
-                            <p class="text-light opacity-75 mb-3">Shop everyday essentials, packaged goods, and daily items delivered fast.</p>
+                            <span class="badge bg-light text-dark mb-2" data-i18n="heroBadge">Daily Supermarket Deals</span>
+                            <h2 class="fw-bold fs-3 fs-md-2" data-i18n="heroTitle">Your Everyday Pantry & Grocery Store</h2>
+                            <p class="text-light opacity-75 mb-3 small-md" data-i18n="heroSub">Shop everyday essentials, packaged goods, and daily items delivered fast.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Active Search and Filter Tags -->
         <div id="active-filter-tags" class="d-flex flex-wrap gap-2 mb-3"></div>
 
         <!-- Product Grid Display -->
         <section class="mb-5">
-            <div id="product-list" class="row g-3">
+            <div id="product-list" class="row g-2 g-md-3">
                 <!-- Items injected dynamically by script.js -->
             </div>
-            <!-- Infinite Scroll Sentinel -->
             <div id="scroll-sentinel" class="py-4 text-center"></div>
         </section>
 
         <!-- Recently Viewed Section -->
         <section id="recently-viewed-section" class="mb-5" style="display:none;">
             <div class="d-flex align-items-center mb-3">
-                <svg width="18" height="18" fill="currentColor" class="me-2 text-muted" viewBox="0 0 16 16">
-                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
-                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
-                </svg>
-                <h5 class="fw-bold mb-0">Recently Viewed Items</h5>
+                <svg width="18" height="18" fill="currentColor" class="me-2 text-muted" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                <h5 class="fw-bold mb-0" data-i18n="recent">Recently Viewed Items</h5>
             </div>
             <div id="recently-viewed-list" class="d-flex gap-3 overflow-x-auto pb-2"></div>
         </section>
     </main>
 
-    <!-- Filter Modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold">Filter Items</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Max Price (EGP)</label>
-                        <input type="range" class="form-range" id="maxPriceSlider" min="0" max="50000" step="500" value="50000">
-                        <div id="priceRangeDisplay" class="small text-muted fw-bold">0 - 50,000 EGP</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Flavor</label>
-                        <select id="flavorFilter" class="form-select rounded-3">
-                            <option value="All">All Flavors</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Size / Weight</label>
-                        <select id="sizeFilter" class="form-select rounded-3">
-                            <option value="All">All Sizes</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="window.resetFilters()">Reset All</button>
-                    <button type="button" class="btn btn-dark rounded-pill" data-bs-dismiss="modal">Apply Filters</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sort Options Modal -->
-    <div class="modal fade" id="sortModal" tabindex="-1" aria-hidden="true">
+    <!-- Sort Modal -->
+    <div class="modal fade" id="sortModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content rounded-4 border-0">
                 <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold">Sort By</h5>
+                    <h5 class="modal-title fw-bold" data-i18n="sortBy">Sort By</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body d-grid gap-2">
-                    <button class="btn btn-outline-dark btn-sort-option rounded-pill text-start" onclick="window.selectSortOption('default', 'Default', this)">Default</button>
-                    <button class="btn btn-outline-dark btn-sort-option rounded-pill text-start" onclick="window.selectSortOption('price-asc', 'Price: Low to High', this)">Price: Low to High</button>
-                    <button class="btn btn-outline-dark btn-sort-option rounded-pill text-start" onclick="window.selectSortOption('price-desc', 'Price: High to Low', this)">Price: High to Low</button>
-                    <button class="btn btn-outline-dark btn-sort-option rounded-pill text-start" onclick="window.selectSortOption('rating-desc', 'Highest Rated', this)">Highest Rated</button>
-                    <button class="btn btn-outline-dark btn-sort-option rounded-pill text-start" onclick="window.selectSortOption('name-asc', 'Name: A-Z', this)">Name: A-Z</button>
+                    <button class="btn btn-outline-dark rounded-pill text-start" onclick="window.selectSortOption('default', 'Default', this)" data-i18n="sortDef">Default</button>
+                    <button class="btn btn-outline-dark rounded-pill text-start" onclick="window.selectSortOption('price-asc', 'Price: Low to High', this)" data-i18n="sortLow">Price: Low to High</button>
+                    <button class="btn btn-outline-dark rounded-pill text-start" onclick="window.selectSortOption('price-desc', 'Price: High to Low', this)" data-i18n="sortHigh">Price: High to Low</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Detailed Product View Modal -->
-    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0">
-                <div class="modal-body p-4">
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="row g-4">
-                        <div class="col-md-6 text-center">
-                            <img id="modal-img" src="" class="img-fluid rounded-4 shadow-sm mb-3" style="max-height: 320px; object-fit: cover; cursor: pointer;" onclick="window.openLightbox(this.src)">
-                            
-                            <!-- Variant Swatches -->
-                            <div id="variant-swatches-container" class="mb-3" style="display:none;">
-                                <label class="small text-muted d-block mb-1 fw-bold">Available Flavors</label>
-                                <div id="modal-flavor-swatches" class="d-flex justify-content-center gap-2 flex-wrap"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 d-flex flex-column justify-content-between">
-                            <div>
-                                <span id="modal-category" class="badge bg-dark mb-2">Category</span>
-                                <h4 id="modal-name" class="fw-bold mb-1">Item Name</h4>
-                                <div class="d-flex align-items-center gap-2 mb-3">
-                                    <div id="modal-avg-stars"></div>
-                                    <span id="modal-rating-text" class="small text-muted">0 / 5 (0 reviews)</span>
-                                </div>
-                                <div id="modal-price-container" class="mb-3"></div>
-                                <p id="modal-desc" class="text-muted small mb-4">Product details and description.</p>
-                            </div>
-                            
-                            <div>
-                                <div id="modal-action-container"></div>
-                                <button class="btn btn-sm btn-outline-secondary w-100 rounded-pill d-flex align-items-center justify-content-center gap-1" onclick="window.shareProduct()">
-                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/>
-                                    </svg>
-                                    Share Item
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <!-- Related Items Sub-Section -->
-                    <div id="related-products-section" class="mb-4" style="display:none;">
-                        <h6 class="fw-bold mb-3">Frequently Bought Together</h6>
-                        <div id="related-products-list" class="d-flex gap-2 overflow-x-auto pb-2"></div>
-                    </div>
-
-                    <!-- Customer Reviews -->
-                    <div>
-                        <h6 class="fw-bold mb-3">Customer Reviews</h6>
-                        
-                        <div class="bg-light p-3 rounded-4 mb-3">
-                            <label class="form-label small fw-bold">Leave a Review</label>
-                            <div id="review-stars-input" class="mb-2">
-                                <span class="star-opt text-secondary fs-5" onclick="window.selectStar(1)" style="cursor:pointer;">★</span>
-                                <span class="star-opt text-secondary fs-5" onclick="window.selectStar(2)" style="cursor:pointer;">★</span>
-                                <span class="star-opt text-secondary fs-5" onclick="window.selectStar(3)" style="cursor:pointer;">★</span>
-                                <span class="star-opt text-secondary fs-5" onclick="window.selectStar(4)" style="cursor:pointer;">★</span>
-                                <span class="star-opt text-secondary fs-5" onclick="window.selectStar(5)" style="cursor:pointer;">★</span>
-                            </div>
-                            <input type="text" id="review-author" class="form-control form-control-sm mb-2 rounded-3" placeholder="Your Name (Optional)">
-                            <textarea id="review-comment" class="form-control form-control-sm mb-2 rounded-3" rows="2" placeholder="Write feedback..."></textarea>
-                            <button id="submit-review-btn" class="btn btn-dark btn-sm rounded-pill">Submit Review</button>
-                        </div>
-
-                        <div id="modal-reviews-list" class="d-flex flex-column gap-2"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Shopping Cart & Delivery Checkout Modal -->
-    <div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-md modal-dialog-centered">
-            <div class="modal-content rounded-4 border-0">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M8 1a2.5 2.5 0 0 0-2.5 2.5V4h5v-.5A2.5 2.5 0 0 0 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
-                        </svg>
-                        Shopping Bag
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="cart-savings-badge" class="alert alert-info py-2 small fw-bold mb-3" style="display:none;"></div>
-                    <div id="cart-items-list" class="mb-3"></div>
-
-                    <div class="d-flex justify-content-between align-items-center fs-5 fw-bold mb-4">
-                        <span>Total:</span>
-                        <span><span id="total-price">0</span> EGP</span>
-                    </div>
-
-                    <h6 class="fw-bold mb-2">Delivery Details</h6>
-                    <div class="mb-2">
-                        <input type="text" id="name" class="form-control rounded-3" placeholder="Full Name">
-                    </div>
-                    <div class="mb-2">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white">+20</span>
-                            <input type="tel" id="phone" class="form-control" placeholder="Phone Number">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <input type="text" id="selectedAddress" class="form-control rounded-3" placeholder="Pin spot on map below..." readonly>
-                    </div>
-
-                    <!-- Delivery Leaflet Map -->
-                    <div id="delivery-map" class="rounded-4 mb-4" style="height: 180px;"></div>
-
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-dark py-3 rounded-pill fw-bold" onclick="window.confirmOrder()">Confirm Order</button>
-                        <button class="btn btn-outline-dark py-2 rounded-pill fw-bold d-flex align-items-center justify-content-center gap-2" onclick="window.orderViaWhatsApp()">
-                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592"/>
-                            </svg>
-                            Order via WhatsApp
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Wishlist Modal -->
-    <div class="modal fade" id="wishlistModal" tabindex="-1" aria-hidden="true">
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0">
                 <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
-                        <svg width="18" height="18" fill="currentColor" class="text-danger" viewBox="0 0 16 16">
-                            <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/>
-                        </svg>
-                        Saved Items
-                    </h5>
+                    <h5 class="modal-title fw-bold" data-i18n="filterItems">Filter Items</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="wishlist-items-list" class="d-flex flex-column gap-2"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small" data-i18n="maxPrice">Max Price (EGP)</label>
+                        <input type="range" class="form-range" id="maxPriceSlider" min="0" max="50000" step="500" value="50000">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="window.resetFilters()" data-i18n="reset">Reset</button>
+                    <button type="button" class="btn btn-dark rounded-pill" data-bs-dismiss="modal" data-i18n="apply">Apply</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Lightbox Modal -->
-    <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content bg-transparent border-0 text-center">
-                <div class="modal-body position-relative">
-                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
-                    <img id="lightbox-img" src="" class="img-fluid rounded-4">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notifications -->
-    <div id="toast" class="toast-notification position-fixed bottom-0 end-0 m-3 p-3 bg-dark text-white rounded-4 shadow" style="display:none; z-index:9999;">
-        Item added to bag!
-    </div>
-
-    <div id="successToast" class="toast-notification position-fixed top-50 start-50 translate-middle p-4 bg-dark text-white rounded-4 shadow text-center" style="display:none; z-index:9999;">
-        <h5 class="fw-bold">Order Received!</h5>
-        <p class="small text-muted mb-0">We will contact you shortly to confirm delivery.</p>
-    </div>
-
-    <!-- Scripts -->
+    <!-- Core Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="script.js"></script>
+
+    <!-- Custom Script: Dark Mode & EN/AR Translation Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- 1. DARK MODE LOGIC ---
+            const toggleBtn = document.getElementById('darkModeToggle');
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme') || 'light';
+
+            if (currentTheme === 'dark') body.classList.add('dark-mode');
+
+            toggleBtn.addEventListener('click', () => {
+                body.classList.toggle('dark-mode');
+                localStorage.setItem('theme', body.classList.contains('dark-mode') ? 'dark' : 'light');
+            });
+
+            // --- 2. TRANSLATION LOGIC (INCLUDING CUSTOM PRODUCTS) ---
+            const langBtn = document.getElementById('langToggle');
+            let currentLang = localStorage.getItem('lang') || 'en';
+            
+            // Standard UI Dictionary
+            const uiDict = {
+                en: {
+                    brand: "Supermarket", deliverTo: "Deliver to", selectSpot: "Select Delivery Spot",
+                    sort: "Sort", filter: "Filter", heroBadge: "Daily Supermarket Deals",
+                    heroTitle: "Your Everyday Pantry & Grocery Store", 
+                    heroSub: "Shop everyday essentials, packaged goods, and daily items delivered fast.",
+                    recent: "Recently Viewed Items", sortBy: "Sort By", sortDef: "Default", 
+                    sortLow: "Price: Low to High", sortHigh: "Price: High to Low", filterItems: "Filter Items",
+                    maxPrice: "Max Price (EGP)", reset: "Reset", apply: "Apply", searchPlace: "Search products..."
+                },
+                ar: {
+                    brand: "سوبر ماركت", deliverTo: "التوصيل إلى", selectSpot: "اختر موقع التوصيل",
+                    sort: "ترتيب", filter: "تصفية", heroBadge: "عروض السوبر ماركت اليومية",
+                    heroTitle: "بقالتك ومتجرك اليومي", 
+                    heroSub: "تسوق الأساسيات اليومية، والسلع المعبأة، والعناصر اليومية تصلك بسرعة.",
+                    recent: "العناصر المعروضة مؤخراً", sortBy: "ترتيب حسب", sortDef: "الافتراضي", 
+                    sortLow: "السعر: من الأقل للأعلى", sortHigh: "السعر: من الأعلى للأقل", filterItems: "تصفية العناصر",
+                    maxPrice: "الحد الأقصى للسعر (جنيه)", reset: "إعادة ضبط", apply: "تطبيق", searchPlace: "ابحث عن المنتجات..."
+                }
+            };
+
+            // Custom Product Name Dictionary
+            const productDict = {
+                "لبن بخيره": "Laban Bekheiro",
+                "Laban Bekheiro": "لبن بخيره"
+            };
+
+            function applyTranslation() {
+                // Set RTL/LTR and update Bootstrap input group layout orientation natively
+                document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                langBtn.innerText = currentLang === 'ar' ? 'English' : 'عربي';
+
+                // Translate Static UI Elements
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (uiDict[currentLang][key]) el.innerText = uiDict[currentLang][key];
+                });
+
+                // Translate Placeholders
+                const searchInput = document.querySelector('.translatable-placeholder');
+                if (searchInput) searchInput.placeholder = uiDict[currentLang].searchPlace;
+
+                // Translate Dynamic Products Currently on Screen
+                translateDynamicNodes();
+            }
+
+            // Function to swap specific product names dynamically
+            function translateDynamicNodes() {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    let text = node.nodeValue.trim();
+                    if (text && productDict[text]) {
+                        if (currentLang === 'ar' && text === "Laban Bekheiro") {
+                            node.nodeValue = node.nodeValue.replace("Laban Bekheiro", "لبن بخيره");
+                        } else if (currentLang === 'en' && text === "لبن بخيره") {
+                            node.nodeValue = node.nodeValue.replace("لبن بخيره", "Laban Bekheiro");
+                        }
+                    }
+                }
+            }
+
+            // Toggle Language on Click
+            langBtn.addEventListener('click', () => {
+                currentLang = currentLang === 'en' ? 'ar' : 'en';
+                localStorage.setItem('lang', currentLang);
+                applyTranslation();
+            });
+
+            // Run on initial load
+            applyTranslation();
+
+            // --- 3. MUTATION OBSERVER ---
+            const observer = new MutationObserver((mutations) => {
+                let shouldTranslate = false;
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes.length > 0) shouldTranslate = true;
+                });
+                if (shouldTranslate) translateDynamicNodes();
+            });
+            
+            observer.observe(document.getElementById('product-list'), { childList: true, subtree: true });
+        });
+    </script>
 </body>
 </html>
