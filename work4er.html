@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kareem Store | Manager Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        body {
+            background: #f4f7f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 20px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: none;
+            margin-bottom: 30px;
+        }
+
+        .btn-luxury {
+            background: #2D2926;
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+        .btn-luxury:hover {
+            background: #D4AF37;
+            color: white;
+        }
+
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        #drop-zone.dragover {
+            background: #e9ecef;
+            border-color: #D4AF37;
+        }
+
+        #preview-img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 15px;
+            display: none;
+            margin: 10px auto;
+        }
+
+        .order-card {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: 0.3s;
+        }
+
+        .table img {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <h2 class="fw-bold mb-5">Kareem Manager Dashboard</h2>
+
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="section-card">
+                    <h4 class="fw-bold mb-4">Product Management</h4>
+                    <div class="row g-3">
+                        <input type="hidden" id="editing-id">
+
+                        <div class="col-12">
+                            <label class="small fw-bold">Product Name</label>
+                            <input type="text" id="p-name" class="form-control" placeholder="Product name">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="small fw-bold">Category</label>
+                            <input type="text" id="p-category" class="form-control" list="category-options"
+                                placeholder="Category name">
+                            <datalist id="category-options">
+                                <option value="chips">
+                                <option value="milk">
+                                <option value="juice">
+                                <option value="noodles">
+                                <option value="sandwiches">
+                            </datalist>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="small fw-bold">Flavor(s)</label>
+                            <input type="text" id="p-flavor" class="form-control" placeholder="Vanilla, Chocolate, Strawberry">
+                        </div>
+
+                        <div class="col-6">
+                            <label class="small fw-bold">Size / Weight</label>
+                            <input type="text" id="p-size" class="form-control"
+                                placeholder="250g, 1L, Small, Pack of 6">
+                        </div>
+
+                        <div class="col-4">
+                            <label class="small fw-bold">Original Price</label>
+                            <input type="number" id="p-price" class="form-control" placeholder="150">
+                        </div>
+
+                        <div class="col-4">
+                            <label class="small fw-bold">Sale Price</label>
+                            <input type="number" id="p-discount" class="form-control" placeholder="120">
+                        </div>
+
+                        <div class="col-4">
+                            <label class="small fw-bold">Stock Quantity</label>
+                            <input type="number" id="p-stock" class="form-control" placeholder="5" value="5">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="small fw-bold">Additional Image URLs (Comma separated)</label>
+                            <input type="text" id="p-images" class="form-control"
+                                placeholder="https://img2.jpg, https://img3.jpg">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="small fw-bold">Details & Specs</label>
+                            <textarea id="p-desc" class="form-control" rows="3"
+                                placeholder="e.g. Fresh daily ingredients, keep refrigerated"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="small fw-bold">Main Product Image</label>
+                            <div id="drop-zone">
+                                <p id="upload-status" class="mb-0 text-muted small">
+                                    <i class="bi bi-cloud-arrow-up fs-4 d-block mb-1"></i> Drag & Drop Image or Click to
+                                    Select
+                                </p>
+                                <img id="preview-img" src="">
+                                <input type="file" id="p-file" hidden accept="image/*">
+                                <input type="hidden" id="p-img-data">
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <button class="btn btn-luxury w-100 py-3 mt-3" onclick="saveProduct()">SAVE TO SHOP</button>
+                        </div>
+                    </div>
+
+                    <hr class="my-5">
+                    <h5 class="fw-bold mb-3">Inventory</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <tbody id="inventory-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="section-card">
+                    <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">Live Orders <i
+                            class="bi bi-inbox-fill"></i></h4>
+                    <div id="order-container" class="row"></div>
+                </div>
+
+                <div class="section-card mt-4">
+                    <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">Restock Alerts <i
+                            class="bi bi-bell-fill"></i></h4>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="small text-muted">
+                                    <th>PRODUCT ID</th>
+                                    <th>EMAIL</th>
+                                    <th>DATE</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="restock-container"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, ref, push, set, onValue, remove } from './firebase-config.js';
+
+        const fileInput = document.getElementById('p-file');
+        const dropZone = document.getElementById('drop-zone');
+        const imgPreview = document.getElementById('preview-img');
+        const statusText = document.getElementById('upload-status');
+        const hiddenImgInput = document.getElementById('p-img-data');
+
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        };
+
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if (!file) return;
+            if (file.size > 1000000) return alert("Image too large! Use photo under 1MB.");
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64String = e.target.result;
+                hiddenImgInput.value = base64String;
+                imgPreview.src = base64String;
+                imgPreview.style.display = "block";
+                statusText.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i> Image Ready';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.saveProduct = async () => {
+            const id = document.getElementById('editing-id').value;
+            const name = document.getElementById('p-name').value;
+            const category = document.getElementById('p-category').value || "Other";
+            const flavor = document.getElementById('p-flavor').value || "";
+            const size = document.getElementById('p-size').value || "";
+            const price = document.getElementById('p-price').value;
+            const discount = document.getElementById('p-discount').value;
+            const stock = document.getElementById('p-stock').value || 5;
+            const imagesRaw = document.getElementById('p-images').value;
+            const description = document.getElementById('p-desc').value;
+            const imgData = hiddenImgInput.value;
+
+            if (!name || !price || !imgData) return alert("Fill Name, Price and Image!");
+
+            const additionalImages = imagesRaw ? imagesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            const data = {
+                name,
+                category,
+                flavor,
+                size,
+                price: Number(price),
+                discountPrice: discount ? Number(discount) : null,
+                stock: Number(stock),
+                images: additionalImages,
+                description: description || "",
+                img: imgData
+            };
+
+            if (id) {
+                await set(ref(db, 'products/' + id), data);
+                document.getElementById('editing-id').value = "";
+            } else {
+                await push(ref(db, 'products'), data);
+            }
+
+            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+            imgPreview.style.display = "none";
+            statusText.innerHTML = '<i class="bi bi-cloud-arrow-up fs-4 d-block mb-1"></i> Drag & Drop Image or Click to Select';
+        };
+    </script>
+</body>
+</html>

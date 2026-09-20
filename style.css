@@ -1,0 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-cream: #FDFBF7;
+    --bg-cream-soft: #FAF5ED;
+    --text-dark: #2D2926;
+    --accent-color: #8C6D53;
+    --border-color: #EFE8DE;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth Page Load Fade-In */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg-cream);
+    color: var(--text-dark);
+    overflow-x: hidden;
+    animation: fadeInPage 0.4s ease-out;
+}
+
+@keyframes fadeInPage {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-cream);
+}
+::-webkit-scrollbar-thumb {
+    background: #DCD4C8;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+.bg-cream {
+    background-color: var(--bg-cream) !important;
+}
+
+.bg-cream-soft {
+    background-color: var(--bg-cream-soft) !important;
+}
+
+.text-accent {
+    color: var(--accent-color) !important;
+}
+
+.navbar {
+    backdrop-filter: blur(12px);
+    background: rgba(253, 251, 247, 0.85);
+}
+
+.navbar .container {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+}
+
+/* Product Card & Hover Lift Animation */
+.product-card {
+    background: #ffffff !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 20px !important;
+    transition: transform 0.25s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.25s ease !important;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(45, 41, 38, 0.08) !important;
+}
+
+.product-card:active {
+    transform: scale(0.98);
+}
+
+.btn-luxury {
+    background: var(--text-dark);
+    color: #ffffff;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-luxury:hover {
+    background: var(--accent-color);
+    color: #ffffff;
+}
+
+/* Flavor Variant Swatches */
+.flavor-swatch-btn, .color-swatch-btn {
+    border: 2px solid var(--border-color);
+    background: #ffffff;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.flavor-swatch-btn.active, .color-swatch-btn.active {
+    border-color: var(--text-dark);
+    background: var(--text-dark);
+    color: #ffffff;
+}
+
+/* Skeleton Loaders */
+.skeleton-card-item {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+.skeleton-img {
+    height: 180px;
+    background: #EFE8DE;
+    border-radius: 20px;
+}
+
+.skeleton-text {
+    height: 14px;
+    background: #EFE8DE;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+/* Toasts */
+.luxury-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--text-dark);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.show-toast {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.success-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50px);
+    background: #198754;
+    color: white;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.4s ease;
+    pointer-events: none;
+}
+
+.show-success {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 576px) {
+    body {
+        font-size: 13.5px;
+    }
+
+    nav.navbar {
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .filter-sort-btn {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+    }
+
+    .modal-dialog:not(.modal-xl) {
+        margin: 0 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .modal-dialog:not(.modal-xl) .modal-content {
+        border-radius: 28px 28px 0 0 !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+    }
+}
