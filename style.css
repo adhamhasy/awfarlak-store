@@ -218,4 +218,15 @@ body {
         max-height: 85vh !important;
         overflow-y: auto !important;
     }
+    
+}
+@media (max-width: 575.98px) {
+    .mobile-icon-only span {
+        display: none !important;
+    }
+    /* Optional: adjusts padding so the icon isn't off-center when the text disappears */
+    .mobile-icon-only {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
 }
