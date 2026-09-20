@@ -103,19 +103,19 @@
                                 <option value="milk">
                                 <option value="juice">
                                 <option value="noodles">
-                                <option value="sandwiches">
+                                <option value="sandwitches">
                             </datalist>
                         </div>
 
                         <div class="col-6">
                             <label class="small fw-bold">Flavor(s)</label>
-                            <input type="text" id="p-flavor" class="form-control" placeholder="Vanilla, Chocolate, Strawberry">
+                            <input type="text" id="p-flavor" class="form-control" placeholder="Chocolate, Vanilla, Spicy">
                         </div>
 
                         <div class="col-6">
                             <label class="small fw-bold">Size / Weight</label>
-                            <input type="text" id="p-size" class="form-control"
-                                placeholder="250g, 1L, Small, Pack of 6">
+                            <input type="text" id="p-sizeweight" class="form-control"
+                                placeholder="250g, 1L, Large">
                         </div>
 
                         <div class="col-4">
@@ -140,9 +140,9 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="small fw-bold">Details & Specs</label>
+                            <label class="small fw-bold">Details & Ingredients</label>
                             <textarea id="p-desc" class="form-control" rows="3"
-                                placeholder="e.g. Fresh daily ingredients, keep refrigerated"></textarea>
+                                placeholder="e.g. Expiry date, ingredients, dietary details"></textarea>
                         </div>
 
                         <div class="col-12">
@@ -202,7 +202,11 @@
     </div>
 
     <script type="module">
+        console.log("%c🚀 [1/6] Script initialized. Importing Firebase modules...", "color: #007bff; font-weight: bold;");
+
         import { db, ref, push, set, onValue, remove } from './firebase-config.js';
+
+        console.log("✅ [2/6] Firebase config loaded successfully.", db);
 
         const fileInput = document.getElementById('p-file');
         const dropZone = document.getElementById('drop-zone');
@@ -210,21 +214,41 @@
         const statusText = document.getElementById('upload-status');
         const hiddenImgInput = document.getElementById('p-img-data');
 
-        dropZone.onclick = () => fileInput.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.onclick = () => {
+            console.log("🖱️ Drop zone clicked -> opening file selector.");
+            fileInput.click();
+        };
+
+        dropZone.ondragover = (e) => { 
+            e.preventDefault(); 
+            dropZone.classList.add('dragover'); 
+        };
+
         dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+
         dropZone.ondrop = (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
+            console.log("📥 File dropped into drop zone:", e.dataTransfer.files[0]);
             handleFile(e.dataTransfer.files[0]);
         };
 
-        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+        fileInput.onchange = (e) => {
+            console.log("📁 File selected via input:", e.target.files[0]);
+            handleFile(e.target.files[0]);
+        };
 
         function handleFile(file) {
-            if (!file) return;
-            if (file.size > 1000000) return alert("Image too large! Use photo under 1MB.");
+            if (!file) {
+                console.warn("⚠️ No file selected.");
+                return;
+            }
+            if (file.size > 1000000) {
+                console.error("❌ Image file size exceeds 1MB limitation:", file.size, "bytes");
+                return alert("Image too large! Use photo under 1MB.");
+            }
 
+            console.log(`🖼️ Processing image: ${file.name} (${Math.round(file.size / 1024)} KB)`);
             const reader = new FileReader();
             reader.onload = (e) => {
                 const base64String = e.target.result;
@@ -232,16 +256,19 @@
                 imgPreview.src = base64String;
                 imgPreview.style.display = "block";
                 statusText.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i> Image Ready';
+                console.log("✅ Image converted to Base64 successfully.");
             };
             reader.readAsDataURL(file);
         }
 
         window.saveProduct = async () => {
+            console.log("💾 saveProduct() invoked.");
+
             const id = document.getElementById('editing-id').value;
             const name = document.getElementById('p-name').value;
             const category = document.getElementById('p-category').value || "Other";
             const flavor = document.getElementById('p-flavor').value || "";
-            const size = document.getElementById('p-size').value || "";
+            const sizeWeight = document.getElementById('p-sizeweight').value || "";
             const price = document.getElementById('p-price').value;
             const discount = document.getElementById('p-discount').value;
             const stock = document.getElementById('p-stock').value || 5;
@@ -249,7 +276,12 @@
             const description = document.getElementById('p-desc').value;
             const imgData = hiddenImgInput.value;
 
-            if (!name || !price || !imgData) return alert("Fill Name, Price and Image!");
+            console.log("📋 Form Field Input Values:", { id, name, category, flavor, sizeWeight, price, discount, stock, description, hasImgData: !!imgData });
+
+            if (!name || !price || !imgData) {
+                console.error("❌ Save validation failed: Name, Price, or Image is missing.");
+                return alert("Fill Name, Price and Image!");
+            }
 
             const additionalImages = imagesRaw ? imagesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
@@ -257,7 +289,7 @@
                 name,
                 category,
                 flavor,
-                size,
+                sizeWeight,
                 price: Number(price),
                 discountPrice: discount ? Number(discount) : null,
                 stock: Number(stock),
@@ -266,17 +298,197 @@
                 img: imgData
             };
 
-            if (id) {
-                await set(ref(db, 'products/' + id), data);
-                document.getElementById('editing-id').value = "";
-            } else {
-                await push(ref(db, 'products'), data);
+            try {
+                if (id) {
+                    console.log(`🔄 Updating existing product at path 'products/${id}'...`, data);
+                    await set(ref(db, 'products/' + id), data);
+                    console.log("✅ Product update complete.");
+                    document.getElementById('editing-id').value = "";
+                } else {
+                    console.log("➕ Creating new product in 'products'...", data);
+                    const newRef = await push(ref(db, 'products'), data);
+                    console.log("✅ New product created with Key:", newRef.key);
+                }
+
+                document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+                imgPreview.style.display = "none";
+                statusText.innerHTML = '<i class="bi bi-cloud-arrow-up fs-4 d-block mb-1"></i> Drag & Drop Image or Click to Select';
+                alert("Product Saved!");
+            } catch (error) {
+                console.error("❌ Error saving product to Firebase:", error);
+                alert("Failed to save product. Check console.");
+            }
+        };
+
+        // Products Listener
+        console.log("📡 Attaching Firebase listener to 'products' path...");
+        onValue(ref(db, 'products'), (snap) => {
+            console.log("📦 'products' real-time data received from Firebase.");
+            const data = snap.val();
+            console.log("Raw Products Data:", data);
+
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = "";
+
+            if (!data) {
+                console.warn("⚠️ No products found in database.");
+                list.innerHTML = "<tr><td colspan='3' class='text-muted text-center py-3'>No products found.</td></tr>";
+                return;
             }
 
-            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
-            imgPreview.style.display = "none";
-            statusText.innerHTML = '<i class="bi bi-cloud-arrow-up fs-4 d-block mb-1"></i> Drag & Drop Image or Click to Select';
+            let count = 0;
+            for (let id in data) {
+                count++;
+                const p = data[id];
+                list.innerHTML += `
+                    <tr>
+                        <td><img src="${p.img || ''}"></td>
+                        <td>
+                            <div class="small fw-bold">${p.name || 'Unnamed'}</div>
+                            <span class="badge bg-secondary">${p.category || 'Other'}</span>
+                            ${p.flavor ? `<span class="badge bg-info text-dark">${p.flavor}</span>` : ''}
+                            ${p.sizeWeight ? `<span class="badge bg-light text-dark border">${p.sizeWeight}</span>` : ''}
+                            <span class="badge ${p.stock > 0 ? 'bg-success' : 'bg-danger'}">Stock: ${p.stock ?? 0}</span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-dark me-1" onclick="editProduct('${id}')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProduct('${id}')"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>`;
+            }
+            console.log(`✅ Rendered ${count} inventory items.`);
+        }, (err) => {
+            console.error("❌ Firebase error fetching products:", err);
+        });
+
+        window.editProduct = (id) => {
+            console.log(`✏️ editProduct('${id}') triggered.`);
+            onValue(ref(db, 'products/' + id), (snap) => {
+                const p = snap.val();
+                console.log("Loaded product for editing:", p);
+                if (!p) {
+                    console.error("❌ Product not found for ID:", id);
+                    return;
+                }
+                document.getElementById('editing-id').value = id;
+                document.getElementById('p-name').value = p.name || "";
+                document.getElementById('p-category').value = p.category || "";
+                document.getElementById('p-flavor').value = p.flavor || p.color || ""; // fallback if old key exists
+                document.getElementById('p-sizeweight').value = p.sizeWeight || p.phoneType || ""; // fallback if old key exists
+                document.getElementById('p-price').value = p.price || "";
+                document.getElementById('p-discount').value = p.discountPrice || "";
+                document.getElementById('p-stock').value = p.stock ?? 5;
+                document.getElementById('p-images').value = p.images ? p.images.join(', ') : "";
+                document.getElementById('p-desc').value = p.description || "";
+                hiddenImgInput.value = p.img || "";
+                imgPreview.src = p.img || "";
+                imgPreview.style.display = p.img ? "block" : "none";
+                window.scrollTo(0, 0);
+                console.log("✅ Product form populated for editing.");
+            }, { onlyOnce: true });
+        };
+
+        window.deleteProduct = (id) => { 
+            console.log(`🗑️ Delete requested for product ID: ${id}`);
+            if (confirm("Delete product?")) {
+                remove(ref(db, 'products/' + id))
+                    .then(() => console.log(`✅ Product '${id}' deleted.`))
+                    .catch((err) => console.error(`❌ Failed to delete product '${id}':`, err));
+            }
+        };
+
+        // Orders List Listener
+        console.log("📡 Attaching Firebase listener to 'orders' path...");
+        onValue(ref(db, 'orders'), (snap) => {
+            console.log("🛒 'orders' real-time data received from Firebase.");
+            const container = document.getElementById('order-container');
+            container.innerHTML = "";
+            const data = snap.val();
+            console.log("Raw Orders Data:", data);
+
+            if (!data) {
+                console.warn("⚠️ Snapshot exists = false or empty at 'orders'. No active orders.");
+                return container.innerHTML = "<p class='text-muted text-center py-4 mb-0'>Waiting for orders...</p>";
+            }
+
+            const keys = Object.keys(data).reverse();
+            console.log(`✅ Found ${keys.length} order(s). Rendering...`);
+
+            keys.forEach(id => {
+                const o = data[id];
+                console.log(`➡️ Order ID: ${id}`, o);
+                const mapUrl = o.coords ? `https://www.google.com/maps?q=${o.coords.lat},${o.coords.lng}` : "#";
+                container.innerHTML += `
+                    <div class="col-12 mb-3">
+                        <div class="card order-card p-3 bg-white">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="fw-bold mb-0">${o.custName || 'Anonymous Customer'}</h6>
+                                <span class="fw-bold text-success">${o.total ?? 0} EGP</span>
+                            </div>
+                            <small class="text-muted d-block mb-1">${o.custLocation || "Alexandria"}</small>
+                            <p class="small mb-2"><strong>Items:</strong> ${o.items || 'No items listed'}</p>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <div class="d-flex gap-1">
+                                    <a href="tel:${o.custPhone}" class="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center gap-1"><i class="bi bi-telephone-fill"></i> Call ${o.custPhone || 'N/A'}</a>
+                                    ${o.coords ? `<a href="${mapUrl}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center gap-1"><i class="bi bi-geo-alt-fill text-danger"></i> Map Location</a>` : ''}
+                                </div>
+                                <button class="btn btn-sm btn-dark rounded-pill" onclick="clearOrder('${id}')">Done</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            console.log("✨ Orders rendering complete.");
+        }, (err) => {
+            console.error("❌ FIREBASE READ ERROR ON 'orders':", err);
+        });
+
+        window.clearOrder = (id) => { 
+            console.log(`✅ Clear/Complete requested for order ID: ${id}`);
+            if (confirm("Clear order?")) {
+                remove(ref(db, 'orders/' + id))
+                    .then(() => console.log(`✅ Order '${id}' cleared successfully.`))
+                    .catch((err) => console.error(`❌ Failed to clear order '${id}':`, err));
+            }
+        };
+
+        // Restock Alerts List Listener
+        console.log("📡 Attaching Firebase listener to 'restock_requests' path...");
+        onValue(ref(db, 'restock_requests'), (snap) => {
+            console.log("🔔 'restock_requests' real-time data received from Firebase.");
+            const container = document.getElementById('restock-container');
+            container.innerHTML = "";
+            const data = snap.val();
+            console.log("Raw Restock Data:", data);
+
+            if (!data) {
+                console.warn("⚠️ No restock requests in database.");
+                return container.innerHTML = "<tr><td colspan='4' class='text-muted text-center py-3'>No restock requests.</td></tr>";
+            }
+
+            const keys = Object.keys(data).reverse();
+            console.log(`✅ Found ${keys.length} restock request(s). Rendering...`);
+
+            keys.forEach(id => {
+                const r = data[id];
+                container.innerHTML += `
+                    <tr>
+                        <td class="small fw-bold">${r.productId || 'N/A'}</td>
+                        <td class="small">${r.email || 'N/A'}</td>
+                        <td class="small text-muted">${r.date ? new Date(r.date).toLocaleDateString() : 'N/A'}</td>
+                        <td><button class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeRestock('${id}')">Remove</button></td>
+                    </tr>`;
+            });
+        }, (err) => {
+            console.error("❌ Firebase error fetching restock requests:", err);
+        });
+
+        window.removeRestock = (id) => { 
+            console.log(`❌ Remove restock request ID: ${id}`);
+            remove(ref(db, 'restock_requests/' + id))
+                .then(() => console.log(`✅ Restock request '${id}' removed.`))
+                .catch((err) => console.error(`❌ Failed to remove restock request '${id}':`, err));
         };
     </script>
 </body>
+
 </html>
