@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Delivery Driver App</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        html, body {
+            background: #ffffff;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 20px;
+        }
+
+        body.activated {
+            background: #FDFBF7;
+        }
+
+        .btn-luxury {
+            background: #2D2926;
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+        .btn-luxury:hover {
+            background: #8C6D53;
+            color: white;
+        }
+
+        .order-count-badge {
+            background: #8C6D53;
+            color: #2D2926;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            margin-left: 6px;
+        }
+
+        .delivery-code-badge {
+            font-family: monospace;
+            letter-spacing: 3px;
+            font-weight: 700;
+            background: #2D2926;
+            color: #E8D5C4;
+            border-radius: 10px;
+            padding: 4px 10px;
+        }
+
+        /* Mobile-first "delivery app" dashboard */
+        #driverDashboard {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+        .driver-order-card {
+            border-radius: 22px;
+            border: none;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            background: white;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .driver-header {
+            background: #2D2926;
+            color: white;
+            border-radius: 22px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 576px) {
+            body { padding: 10px; }
+            #driverDashboard .driver-order-card { border-radius: 18px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =====================================================================
+         Nothing renders here until PAGE_CODE below matches a driver created in
+         admin.html - the page just stays blank white until then.
+    ====================================================================== -->
+
+    <div id="driverDashboard" style="display:none;">
+        <div class="driver-header d-flex justify-content-between align-items-center">
+            <div>
+                <div class="small opacity-75">Delivery Driver</div>
+                <div class="fw-bold fs-5" id="driver-name-label">Driver</div>
+                <div class="small opacity-75" id="driver-store-label">Connected to: —</div>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mb-3 px-1">My Deliveries <span class="order-count-badge bg-dark text-white" id="driver-count">0</span></h5>
+        <div id="driver-orders-list"></div>
+    </div>
+
+    <script type="module">
+        import { db, ref, get, update, onValue } from './firebase-config.js';
+
+        /* =====================================================================
+           >>>>>>>>>>>>>>>>>>>>>>>>  EDIT THIS WHEN DUPLICATING  <<<<<<<<<<<<<<<<<<<<<<<<
+           Every driver gets their own copy of this file with their own unique CODE below.
+           Create the matching driver code first in admin.html (linked to a store).
+           Example: ahmed.html -> PAGE_CODE = "D101"   |   mostafa.html -> PAGE_CODE = "D102"
+           Until PAGE_CODE matches a real driver code, this page stays blank white.
+        ===================================================================== */
+        const PAGE_CODE = "D101";
+        /* =====================================================================
+           >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        ===================================================================== */
+
+        /* =====================================================================
+           AUDIO ALERT - synthesized bell "ding" so no external mp3 hosting needed
+        ===================================================================== */
+        function playBell() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                [880, 1320].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.35, now + i * 0.15 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.9);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 1);
+                });
+            } catch (e) { /* audio not available - fail silently */ }
+        }
+
+        let myDriverRecord = null;
+
+        /* =====================================================================
+           ACTIVATION: page stays blank white until PAGE_CODE matches a driver.
+        ===================================================================== */
+        (async function init() {
+            const driverSnap = await get(ref(db, 'drivers/' + PAGE_CODE));
+            if (!driverSnap.exists()) {
+                console.log('[delivery] PAGE_CODE "' + PAGE_CODE + '" does not match any driver yet. Create it in admin.html.');
+                return; // stays blank white - nothing else renders
+            }
+            myDriverRecord = driverSnap.val();
+            document.body.classList.add('activated');
+            document.getElementById('driverDashboard').style.display = 'block';
+            initDriverDashboard();
+        })();
+
+        async function bumpStoreStats(storeCode, deltas) {
+            if (!storeCode) return;
+            const statsRef = ref(db, 'stores/' + storeCode + '/stats');
+            const snap = await get(statsRef);
+            const cur = snap.val() || { totalRevenue: 0, totalOrders: 0, deniedCount: 0, timeoutCount: 0, acceptTimeSum: 0, acceptedCount: 0 };
+            const next = { ...cur };
+            Object.entries(deltas).forEach(([k, v]) => { next[k] = (cur[k] || 0) + v; });
+            await update(ref(db, 'stores/' + storeCode + '/stats'), next);
+        }
+
+        function initDriverDashboard() {
+            document.getElementById('driver-name-label').innerText = myDriverRecord.name || "Driver";
+            document.title = (myDriverRecord.name || "Driver") + " | Delivery App";
+
+            get(ref(db, 'stores/' + myDriverRecord.storeId)).then(snap => {
+                const s = snap.val();
+                document.getElementById('driver-store-label').innerText = "Connected to: " + (s ? (s.branchName || s.name) : "Unknown branch");
+            });
+
+            let knownOutForDeliveryIds = new Set();
+
+            onValue(ref(db, 'orders'), (snap) => {
+                const data = snap.val() || {};
+                const container = document.getElementById('driver-orders-list');
+                container.innerHTML = '';
+                let count = 0;
+                let currentRoundIds = new Set();
+
+                Object.entries(data).forEach(([id, o]) => {
+                    if (o.driverId !== PAGE_CODE || o.status !== 'out_for_delivery') return;
+                    count++;
+                    currentRoundIds.add(id);
+                    const mapUrl = o.coords ? `https://www.google.com/maps?q=${o.coords.lat},${o.coords.lng}` : "#";
+
+                    container.insertAdjacentHTML('beforeend', `
+                    <div class="driver-order-card">
+                        <div class="d-flex justify-content-between mb-2">
+                            <h6 class="fw-bold mb-0">${o.custName || 'Customer'}</h6>
+                            <span class="fw-bold text-success">${o.total ?? 0} EGP</span>
+                        </div>
+                        <p class="small text-muted mb-2">${o.custLocation || ""}</p>
+                        <p class="small mb-2"><strong>Items:</strong> ${o.items || ''}</p>
+                        <div class="d-flex gap-2 mb-3">
+                            <a href="tel:${o.custPhone}" class="btn btn-sm btn-outline-primary rounded-pill flex-fill"><i class="bi bi-telephone-fill"></i> Call</a>
+                            ${o.coords ? `<a href="${mapUrl}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill"><i class="bi bi-geo-alt-fill text-danger"></i> Navigate</a>` : ''}
+                        </div>
+                        <label class="small fw-bold text-muted mb-1">Enter customer's delivery code:</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" maxlength="4" class="form-control rounded-pill text-center" id="code-input-${id}" placeholder="0000">
+                            <button class="btn btn-luxury rounded-pill px-4" onclick="window.completeDelivery('${id}')">Confirm</button>
+                        </div>
+                    </div>`);
+                });
+
+                document.getElementById('driver-count').innerText = count;
+                if (count === 0) container.innerHTML = `<p class="text-muted text-center py-5">No active deliveries assigned to you right now.</p>`;
+
+                currentRoundIds.forEach(id => { if (!knownOutForDeliveryIds.has(id)) playBell(); });
+                knownOutForDeliveryIds = currentRoundIds;
+            });
+        }
+
+        window.completeDelivery = async (orderId) => {
+            const input = document.getElementById('code-input-' + orderId);
+            const entered = input ? input.value.trim() : "";
+            const snap = await get(ref(db, 'orders/' + orderId));
+            const o = snap.val();
+            if (!o) return;
+
+            if (entered !== o.deliveryCode) {
+                alert("Incorrect code. Please ask the customer for the correct 4-digit delivery code.");
+                return;
+            }
+
+            await update(ref(db, 'orders/' + orderId), { status: 'delivered', deliveredAt: Date.now() });
+            await update(ref(db, 'drivers/' + PAGE_CODE), { busy: false });
+            if (o.assignedStoreId) {
+                await bumpStoreStats(o.assignedStoreId, { totalRevenue: Number(o.total) || 0 });
+            }
+            alert("Delivery confirmed! Great job.");
+        };
+    </script>
+</body>
+
+</html>

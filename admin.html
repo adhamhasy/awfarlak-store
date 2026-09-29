@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Store Network Control Center</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS - required for the clickable store-setup map and the heatmap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        body {
+            background: #FDFBF7;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 20px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: none;
+            margin-bottom: 30px;
+        }
+
+        .btn-luxury {
+            background: #2D2926;
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+        .btn-luxury:hover { background: #8C6D53; color: white; }
+
+        #store-pin-map, #heatmap { border-radius: 20px; height: 350px; width: 100%; }
+
+        .legend-dot {
+            width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px;
+        }
+        .legend-dot.green { background: #1db954; }
+        .legend-dot.yellow { background: #f4c430; }
+        .legend-dot.red { background: #e0463f; }
+
+        .code-badge {
+            font-family: monospace;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: #2D2926;
+            color: #E8D5C4;
+            border-radius: 10px;
+            padding: 3px 10px;
+        }
+
+        .table td, .table th { vertical-align: middle; }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-fluid" id="adminDashboard">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Store Network Control Center</h2>
+                <p class="text-muted small mb-0">No login required here. Duplicate <code>work4er.html</code> for each store branch and <code>delivery.html</code> for each driver — set the matching plain code inside each duplicate's script.</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- ============ Add Store ============ -->
+            <div class="col-lg-6">
+                <div class="section-card">
+                    <h4 class="fw-bold mb-1">Create Store Branch</h4>
+                    <p class="small text-muted">Drop a pin on the map to capture the branch's exact GPS coordinates.</p>
+
+                    <div class="mb-2">
+                        <label class="small fw-bold">Store / Brand Name</label>
+                        <input type="text" id="store-name" class="form-control" placeholder="e.g. Kareem Store">
+                    </div>
+                    <div class="mb-2">
+                        <label class="small fw-bold">Branch Name (shown to customers)</label>
+                        <input type="text" id="store-branch" class="form-control" placeholder="e.g. Kareem Store - Miami Branch">
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Store Code</label>
+                        <input type="text" id="store-code" class="form-control" placeholder="e.g. 1234">
+                        <div class="form-text">Put this exact code into the <code>PAGE_CODE</code> constant at the top of that branch's duplicated <code>work4er.html</code> file (e.g. <code>kawana.html</code>).</div>
+                    </div>
+
+                    <label class="small fw-bold d-block mb-1">Branch Location (click the map to drop a pin)</label>
+                    <div id="store-pin-map" class="mb-2"></div>
+                    <input type="text" id="store-coords-display" class="form-control form-control-sm rounded-pill mb-3" readonly placeholder="No location selected yet">
+
+                    <button class="btn btn-luxury w-100 py-2" onclick="window.createStore()">CREATE STORE</button>
+                    <div id="store-create-msg" class="small mt-2"></div>
+                </div>
+            </div>
+
+            <!-- ============ Add Driver ============ -->
+            <div class="col-lg-6">
+                <div class="section-card">
+                    <h4 class="fw-bold mb-1">Create Delivery Driver</h4>
+                    <p class="small text-muted">Every driver must be linked to one store branch.</p>
+
+                    <div class="mb-2">
+                        <label class="small fw-bold">Driver Name</label>
+                        <input type="text" id="driver-name" class="form-control" placeholder="e.g. Ahmed Samir">
+                    </div>
+                    <div class="mb-2">
+                        <label class="small fw-bold">Driver Code</label>
+                        <input type="text" id="driver-code" class="form-control" placeholder="e.g. D101">
+                        <div class="form-text">Put this exact code into the <code>PAGE_CODE</code> constant of that driver's duplicated <code>delivery.html</code> file (e.g. <code>ahmed.html</code>).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">Linked Store Branch</label>
+                        <select id="driver-store-select" class="form-select"></select>
+                    </div>
+
+                    <button class="btn btn-luxury w-100 py-2" onclick="window.createDriver()">CREATE DRIVER</button>
+                    <div id="driver-create-msg" class="small mt-2"></div>
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3">All Drivers</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead><tr class="small text-muted"><th>Code</th><th>Driver</th><th>Branch</th><th>Status</th><th></th></tr></thead>
+                            <tbody id="admin-driver-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ Heatmap ============ -->
+        <div class="section-card">
+            <h4 class="fw-bold mb-1">Live Store Heatmap</h4>
+            <p class="small text-muted mb-2">
+                <span class="legend-dot green"></span>Online &amp; available
+                &nbsp;&nbsp;<span class="legend-dot yellow"></span>Online but at max capacity / all drivers busy
+                &nbsp;&nbsp;<span class="legend-dot red"></span>Offline
+            </p>
+            <div id="heatmap"></div>
+        </div>
+
+        <!-- ============ Analytics ============ -->
+        <div class="section-card">
+            <h4 class="fw-bold mb-4">Store Performance Analytics</h4>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr class="small text-muted">
+                            <th>Code</th>
+                            <th>Branch</th>
+                            <th>Status</th>
+                            <th>Avg Accept Time</th>
+                            <th>Denial Rate</th>
+                            <th>Total Revenue</th>
+                            <th>Total Orders</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="analytics-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, ref, set, update, get, onValue, remove } from './firebase-config.js';
+
+        let pinMap = null;
+        let pinMarker = null;
+        let selectedStoreCoords = null;
+        let storesCache = {};
+        let driversCache = {};
+
+        /* =====================================================================
+           INTERACTIVE STORE SETUP MAP (Leaflet - click to drop pin)
+        ===================================================================== */
+        function initPinMap() {
+            if (pinMap) return;
+            const center = [31.2001, 29.9187]; // Alexandria default
+            pinMap = L.map('store-pin-map').setView(center, 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(pinMap);
+
+            pinMap.on('click', (e) => {
+                selectedStoreCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+                if (pinMarker) pinMap.removeLayer(pinMarker);
+                pinMarker = L.marker(e.latlng, { draggable: true }).addTo(pinMap);
+                document.getElementById('store-coords-display').value =
+                    `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
+
+                pinMarker.on('dragend', () => {
+                    const pos = pinMarker.getLatLng();
+                    selectedStoreCoords = { lat: pos.lat, lng: pos.lng };
+                    document.getElementById('store-coords-display').value =
+                        `Lat: ${pos.lat.toFixed(5)}, Lng: ${pos.lng.toFixed(5)}`;
+                });
+            });
+        }
+
+        /* =====================================================================
+           CREATE STORE - keyed directly by the plain code the admin chooses
+        ===================================================================== */
+        window.createStore = async () => {
+            const name = document.getElementById('store-name').value.trim();
+            const branchName = document.getElementById('store-branch').value.trim() || name;
+            const code = document.getElementById('store-code').value.trim();
+            const msgEl = document.getElementById('store-create-msg');
+
+            if (!name || !code || !selectedStoreCoords) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Please fill in the name, a code, and drop a pin on the map.";
+                return;
+            }
+            if (!/^[a-zA-Z0-9_-]+$/.test(code)) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Code can only contain letters, numbers, - and _ (no spaces).";
+                return;
+            }
+
+            try {
+                const [storeSnap, driverSnap] = await Promise.all([
+                    get(ref(db, 'stores/' + code)),
+                    get(ref(db, 'drivers/' + code)),
+                ]);
+                if (storeSnap.exists() || driverSnap.exists()) {
+                    msgEl.className = 'small mt-2 text-danger';
+                    msgEl.innerText = `Code "${code}" is already in use. Pick a different one.`;
+                    return;
+                }
+
+                await set(ref(db, 'stores/' + code), {
+                    name,
+                    branchName,
+                    lat: selectedStoreCoords.lat,
+                    lng: selectedStoreCoords.lng,
+                    online: true,
+                    createdAt: Date.now(),
+                    stats: { totalRevenue: 0, totalOrders: 0, deniedCount: 0, timeoutCount: 0, acceptTimeSum: 0, acceptedCount: 0 },
+                });
+
+                msgEl.className = 'small mt-2 text-success';
+                msgEl.innerHTML = `Store "${branchName}" created with code <span class="code-badge">${code}</span>. Duplicate <code>work4er.html</code>, set <code>PAGE_CODE = "${code}"</code> at the top of its script, and give that file to the manager.`;
+                document.getElementById('store-name').value = '';
+                document.getElementById('store-branch').value = '';
+                document.getElementById('store-code').value = '';
+                document.getElementById('store-coords-display').value = '';
+                selectedStoreCoords = null;
+                if (pinMarker) { pinMap.removeLayer(pinMarker); pinMarker = null; }
+            } catch (e) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Failed: " + (e.message || "Could not create store.");
+            }
+        };
+
+        /* =====================================================================
+           CREATE DRIVER - keyed directly by the plain code the admin chooses
+        ===================================================================== */
+        window.createDriver = async () => {
+            const name = document.getElementById('driver-name').value.trim();
+            const code = document.getElementById('driver-code').value.trim();
+            const storeCode = document.getElementById('driver-store-select').value;
+            const msgEl = document.getElementById('driver-create-msg');
+
+            if (!name || !code || !storeCode) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Please fill in all fields and select a linked store branch.";
+                return;
+            }
+            if (!/^[a-zA-Z0-9_-]+$/.test(code)) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Code can only contain letters, numbers, - and _ (no spaces).";
+                return;
+            }
+
+            try {
+                const [storeSnap, driverSnap] = await Promise.all([
+                    get(ref(db, 'stores/' + code)),
+                    get(ref(db, 'drivers/' + code)),
+                ]);
+                if (storeSnap.exists() || driverSnap.exists()) {
+                    msgEl.className = 'small mt-2 text-danger';
+                    msgEl.innerText = `Code "${code}" is already in use. Pick a different one.`;
+                    return;
+                }
+
+                await set(ref(db, 'drivers/' + code), {
+                    name, storeId: storeCode, busy: false, createdAt: Date.now(),
+                });
+
+                msgEl.className = 'small mt-2 text-success';
+                msgEl.innerHTML = `Driver "${name}" created with code <span class="code-badge">${code}</span>. Duplicate <code>delivery.html</code>, set <code>PAGE_CODE = "${code}"</code> at the top of its script, and give that file to the driver.`;
+                document.getElementById('driver-name').value = '';
+                document.getElementById('driver-code').value = '';
+            } catch (e) {
+                msgEl.className = 'small mt-2 text-danger';
+                msgEl.innerText = "Failed: " + (e.message || "Could not create driver.");
+            }
+        };
+
+        /* =====================================================================
+           DASHBOARD DATA: stores, drivers, heatmap, analytics
+        ===================================================================== */
+        let heatMap = null;
+        let heatMarkers = {};
+
+        initPinMap();
+        setTimeout(() => pinMap.invalidateSize(), 200);
+
+        onValue(ref(db, 'stores'), (snap) => {
+            storesCache = snap.val() || {};
+            renderStoreSelect();
+            renderHeatmap();
+            renderAnalytics();
+            renderDriverTable(); // branch names may have changed
+        });
+
+        onValue(ref(db, 'drivers'), (snap) => {
+            driversCache = snap.val() || {};
+            renderDriverTable();
+            renderHeatmap(); // capacity depends on driver busy states
+            renderAnalytics();
+        });
+
+        function renderStoreSelect() {
+            const sel = document.getElementById('driver-store-select');
+            const currentVal = sel.value;
+            sel.innerHTML = Object.entries(storesCache)
+                .map(([code, s]) => `<option value="${code}">${s.branchName || s.name} (${code})</option>`)
+                .join('') || '<option value="">No stores yet</option>';
+            if (currentVal) sel.value = currentVal;
+        }
+
+        function renderDriverTable() {
+            const tbody = document.getElementById('admin-driver-list');
+            const entries = Object.entries(driversCache);
+            if (entries.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' class='text-muted text-center small py-3'>No drivers created yet.</td></tr>";
+                return;
+            }
+            tbody.innerHTML = entries.map(([code, d]) => {
+                const store = storesCache[d.storeId];
+                return `<tr>
+                    <td><span class="code-badge">${code}</span></td>
+                    <td class="small fw-bold">${d.name}</td>
+                    <td class="small">${store ? (store.branchName || store.name) : 'Unlinked'}</td>
+                    <td><span class="badge ${d.busy ? '' : 'bg-success'}" style="${d.busy ? 'background:#f4c430;color:#2D2926;' : ''}">${d.busy ? 'Busy' : 'Free'}</span></td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="window.deleteDriver('${code}')"><i class="bi bi-trash"></i></button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.deleteDriver = (code) => {
+            if (confirm(`Delete driver "${code}"? This can't be undone.`)) remove(ref(db, 'drivers/' + code));
+        };
+
+        function storeCapacityStatus(storeCode, store) {
+            if (!store.online) return 'offline';
+            const myDrivers = Object.values(driversCache).filter(d => d.storeId === storeCode);
+            if (myDrivers.length > 0 && myDrivers.every(d => d.busy)) return 'busy';
+            return 'online';
+        }
+
+        function renderHeatmap() {
+            const el = document.getElementById('heatmap');
+            if (!el) return;
+            if (!heatMap) {
+                heatMap = L.map('heatmap').setView([31.2001, 29.9187], 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(heatMap);
+            }
+            Object.values(heatMarkers).forEach(m => heatMap.removeLayer(m));
+            heatMarkers = {};
+
+            const colorFor = { online: '#1db954', busy: '#f4c430', offline: '#e0463f' };
+
+            Object.entries(storesCache).forEach(([code, s]) => {
+                if (typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
+                const status = storeCapacityStatus(code, s);
+                const marker = L.circleMarker([s.lat, s.lng], {
+                    radius: 10,
+                    fillColor: colorFor[status],
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.9,
+                }).addTo(heatMap);
+                marker.bindPopup(`<strong>${s.branchName || s.name}</strong> (${code})<br>${status.toUpperCase()}`);
+                heatMarkers[code] = marker;
+            });
+
+            setTimeout(() => heatMap.invalidateSize(), 200);
+        }
+
+        function renderAnalytics() {
+            const tbody = document.getElementById('analytics-list');
+            const entries = Object.entries(storesCache);
+            if (entries.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='9' class='text-muted text-center py-3'>No stores yet. Create one above.</td></tr>";
+                return;
+            }
+
+            tbody.innerHTML = entries.map(([code, s]) => {
+                const stats = s.stats || {};
+                const avgAcceptMs = stats.acceptedCount > 0 ? (stats.acceptTimeSum || 0) / stats.acceptedCount : 0;
+                const avgAcceptDisplay = stats.acceptedCount > 0 ? `${Math.round(avgAcceptMs / 1000)}s` : '—';
+                const totalDecisions = (stats.acceptedCount || 0) + (stats.deniedCount || 0) + (stats.timeoutCount || 0);
+                const denialRate = totalDecisions > 0 ? Math.round(((stats.deniedCount || 0) + (stats.timeoutCount || 0)) / totalDecisions * 100) : 0;
+                const status = storeCapacityStatus(code, s);
+                const badgeColor = status === 'online' ? 'bg-success' : status === 'busy' ? '' : 'bg-danger';
+                const badgeStyle = status === 'busy' ? 'background:#f4c430;color:#2D2926;' : '';
+
+                return `<tr>
+                    <td><span class="code-badge">${code}</span></td>
+                    <td class="fw-bold small">${s.branchName || s.name}</td>
+                    <td><span class="badge ${badgeColor}" style="${badgeStyle}">${status}</span></td>
+                    <td class="small">${avgAcceptDisplay}</td>
+                    <td class="small">${denialRate}%</td>
+                    <td class="small fw-bold text-success">${(stats.totalRevenue || 0).toLocaleString()} EGP</td>
+                    <td class="small">${stats.totalOrders || 0}</td>
+                    <td>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" ${s.online ? 'checked' : ''} onchange="window.adminToggleStoreOnline('${code}', this.checked)">
+                        </div>
+                    </td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="window.deleteStore('${code}')"><i class="bi bi-trash"></i></button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.adminToggleStoreOnline = async (storeCode, isOnline) => {
+            await update(ref(db, 'stores/' + storeCode), { online: isOnline });
+        };
+
+        window.deleteStore = (code) => {
+            if (confirm(`Delete store "${code}"? Any drivers linked to it will be orphaned. This can't be undone.`)) {
+                remove(ref(db, 'stores/' + code));
+            }
+        };
+    </script>
+</body>
+
+</html>

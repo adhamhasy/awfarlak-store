@@ -1,5 +1,54 @@
 // script.js
-import { db, ref, onValue, push, set } from "./firebase-config.js";
+import { db, ref, onValue, push, set, get, update } from "./firebase-config.js";
+
+/* =========================================================================
+   MULTI-STORE ORDER ROUTING (Haversine nearest-store dispatch)
+   ========================================================================= */
+let liveStores = {}; // storeId -> store record from Firebase "stores" node
+
+// Haversine formula: precise spherical distance (km) between two GPS points
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371; // Earth radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Listen for live store list (used to route new orders to the nearest ONLINE store)
+onValue(ref(db, "stores"), (snap) => {
+  liveStores = snap.val() || {};
+});
+
+// Build a routing queue (store ids sorted nearest -> farthest) for a given customer location.
+// Only stores currently marked "online" are eligible for routing.
+function buildRoutingQueue(custLat, custLng) {
+  const eligible = Object.entries(liveStores)
+    .filter(([, s]) => s && s.online && typeof s.lat === "number" && typeof s.lng === "number")
+    .map(([id, s]) => ({
+      id,
+      name: s.branchName || s.name || "Store",
+      distanceKm: haversineDistanceKm(custLat, custLng, s.lat, s.lng),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  return eligible;
+}
+
+function generateDeliveryCode() {
+  return String(Math.floor(1000 + Math.random() * 9000)); // 4-digit code
+}
+
+// Helper to safely get or create a Bootstrap Modal instance without duplicating backdrops
+function getModalInstance(modalId) {
+  const el = document.getElementById(modalId);
+  if (!el) return null;
+  return bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+}
 
 // State Management
 let cart = JSON.parse(localStorage.getItem("cart") || "{}");
@@ -24,6 +73,7 @@ let scrollObserver = null;
 let mapInstance = null;
 let mapMarker = null;
 let selectedCoords = { lat: 31.2001, lng: 29.9187 };
+let hasPinnedLocation = false; // becomes true once the customer actually moves the pin
 
 // Debounce Utility for Search Input
 function debounce(func, delay = 250) {
@@ -58,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupInfiniteScroll();
   updateUI();
+  updateMyOrdersBadge();
 });
 
 // Fetch Live Products from Firebase
@@ -66,10 +117,13 @@ onValue(ref(db, "products"), (snapshot) => {
   allProducts = [];
 
   if (!data) {
-    document.getElementById("product-list").innerHTML = `
-      <div class="col-12 text-center mt-5 py-5">
-          <p class="text-muted">No products found in shop.</p>
-      </div>`;
+    const productList = document.getElementById("product-list");
+    if (productList) {
+      productList.innerHTML = `
+        <div class="col-12 text-center mt-5 py-5">
+            <p class="text-muted">No products found in shop.</p>
+        </div>`;
+    }
     return;
   }
 
@@ -97,7 +151,9 @@ function renderStarIcons(avgRating) {
   const rounded = Math.round(avgRating);
   let starsHTML = "";
   for (let i = 1; i <= 5; i++) {
-    starsHTML += i <= rounded ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
+    starsHTML += i <= rounded
+      ? '<i class="bi bi-star-fill text-warning"></i>'
+      : '<i class="bi bi-star star-empty text-muted"></i>';
   }
   return starsHTML;
 }
@@ -153,11 +209,8 @@ window.selectSortOption = (option, label, btnEl) => {
   }
 
   window.filterAndSortProducts();
-  const sortModalEl = document.getElementById("sortModal");
-  if (sortModalEl) {
-    const modal = bootstrap.Modal.getInstance(sortModalEl);
-    if (modal) modal.hide();
-  }
+  const modalInstance = getModalInstance("sortModal");
+  if (modalInstance) modalInstance.hide();
 };
 
 // Main Filtering & Sorting Engine
@@ -269,7 +322,7 @@ function renderProductsBatched() {
     col.innerHTML = `
       <div class="card border-0 product-card h-100 d-flex flex-column position-relative" style="cursor: pointer;">
           <button class="btn btn-sm rounded-circle position-absolute top-0 start-0 m-2 z-3 d-flex align-items-center justify-content-center ${
-            isWishlisted ? "bg-danger text-white" : "bg-white text-dark shadow-sm"
+            isWishlisted ? "bg-danger text-white" : "wishlist-toggle-btn shadow-sm"
           }" 
                   onclick="window.toggleWishlist('${p.id}', event)" title="Wishlist">
               <i class="bi ${isWishlisted ? "bi-heart-fill" : "bi-heart"}"></i>
@@ -281,17 +334,17 @@ function renderProductsBatched() {
           </div>
           <div class="card-body px-2 py-2 text-center d-flex flex-column justify-content-between" onclick="window.openProductModal('${p.id}')">
               <div>
-                  <h6 class="fw-bold mb-1 small text-truncate">${p.name}</h6>
-                  <div class="small mb-1">
-                      ${renderStarIcons(avg)} <span class="text-muted" style="font-size:0.75rem;">(${avg})</span>
+                  <h6 class="fw-bold mb-1 small text-truncate product-title">${p.name}</h6>
+                  <div class="small mb-1 star-rating">
+                      ${renderStarIcons(avg)} <span class="text-muted rating-count" style="font-size:0.75rem;">(${avg})</span>
                   </div>
               </div>
-              <p class="mb-2 small">
+              <p class="mb-2 small price">
                   ${hasDiscount ? `<del class="text-danger me-1">${p.price}</del>` : ""}
                   <span class="fw-bold">${displayPrice} EGP</span>
               </p>
           </div>
-          <button class="btn ${isOutOfStock ? "btn-secondary" : "btn-dark"} w-100 rounded-pill btn-sm d-flex justify-content-center align-items-center gap-1" 
+          <button class="btn ${isOutOfStock ? "btn-secondary" : "btn-dark btn-add-bag"} w-100 rounded-pill btn-sm d-flex justify-content-center align-items-center gap-1" 
                   ${isOutOfStock ? "disabled" : ""} 
                   onclick="window.addToCart('${p.id}', '${p.name.replace(/'/g, "")}', ${displayPrice}, '${p.img}', null, event)">
               <span>${isOutOfStock ? "Sold Out" : "Add to Bag"}</span>
@@ -375,7 +428,8 @@ window.openProductModal = (id) => {
     document.getElementById("modal-add-btn").onclick = (e) => {
       const currentImg = mainImgEl.src;
       window.addToCart(p.id, p.name, displayPrice, currentImg, activeSelectedVariantFlavor, e);
-      bootstrap.Modal.getInstance(document.getElementById("productModal")).hide();
+      const productModalInstance = getModalInstance("productModal");
+      if (productModalInstance) productModalInstance.hide();
     };
   } else {
     actionContainer.innerHTML = `<button class="btn btn-secondary w-100 py-3 rounded-pill mb-4" disabled>OUT OF STOCK</button>`;
@@ -393,7 +447,9 @@ window.openProductModal = (id) => {
 
   renderReviewsList(p.reviews);
   renderRelatedProducts(p.category, p.id);
-  new bootstrap.Modal(document.getElementById("productModal")).show();
+
+  const productModalInstance = getModalInstance("productModal");
+  if (productModalInstance) productModalInstance.show();
 };
 
 window.selectFlavorVariant = (flavorName, imgUrl, btnEl) => {
@@ -447,7 +503,7 @@ function renderReviewsList(reviewsObj) {
   container.innerHTML = reviews
     .map(
       (r) => `
-    <div class="p-3 bg-cream-soft rounded-4">
+    <div class="review-item-card p-3 rounded-4">
       <div class="d-flex justify-content-between align-items-center mb-1">
         <span class="fw-bold small">${r.author || "Anonymous"}</span>
         <span class="small">${renderStarIcons(r.rating || 5)}</span>
@@ -463,7 +519,8 @@ window.openLightbox = (src) => {
   const img = document.getElementById("lightbox-img");
   if (img) {
     img.src = src;
-    new bootstrap.Modal(document.getElementById("lightboxModal")).show();
+    const instance = getModalInstance("lightboxModal");
+    if (instance) instance.show();
   }
 };
 
@@ -496,7 +553,7 @@ function renderRelatedProducts(category, currentId) {
   container.innerHTML = related
     .map(
       (p) => `
-    <div class="card border-0 bg-cream-soft p-2 flex-shrink-0" style="width: 130px; cursor: pointer;" onclick="window.openProductModal('${p.id}')">
+    <div class="card border-0 product-sub-card p-2 flex-shrink-0" style="width: 130px; cursor: pointer;" onclick="window.openProductModal('${p.id}')">
       <img src="${p.img}" loading="lazy" class="rounded-3 mb-2" style="width: 100%; height: 90px; object-fit: cover;">
       <div class="fw-bold small text-truncate text-center">${p.name}</div>
       <div class="small text-muted text-center">${p.price} EGP</div>
@@ -521,6 +578,7 @@ window.addToCart = (id, name, price, img, selectedFlavor = null, event = null) =
   }
 
   updateUI();
+  renderCartContent(); // Update open cart DOM without re-opening modal backdrop
 
   const t = document.getElementById("toast");
   if (t) {
@@ -530,7 +588,7 @@ window.addToCart = (id, name, price, img, selectedFlavor = null, event = null) =
 };
 
 function animateFlyToCart(targetEl) {
-  const cartBtn = document.querySelector(".bi-bag-fill");
+  const cartBtn = document.getElementById("cart-bag-btn");
   if (!cartBtn) return;
 
   const targetRect = targetEl.getBoundingClientRect();
@@ -561,11 +619,13 @@ function animateFlyToCart(targetEl) {
   setTimeout(() => flyer.remove(), 650);
 }
 
-// Cart Modal & Calculations
-window.openCheckout = () => {
+// Render Cart DOM Items & Summary Totals
+function renderCartContent() {
   const listDiv = document.getElementById("cart-items-list");
   const totalEl = document.getElementById("total-price");
   const savingsBadge = document.getElementById("cart-savings-badge");
+
+  if (!listDiv) return;
 
   let total = 0;
   let totalSavings = 0;
@@ -577,7 +637,7 @@ window.openCheckout = () => {
         <i class="bi bi-bag-x fs-1 text-muted d-block mb-2"></i>
         <p class="text-muted mb-0">Your bag is currently empty.</p>
       </div>`;
-    totalEl.innerText = "0";
+    if (totalEl) totalEl.innerText = "0";
     if (savingsBadge) savingsBadge.style.display = "none";
   } else {
     listDiv.innerHTML = keys
@@ -593,25 +653,25 @@ window.openCheckout = () => {
         const itemFlavor = item.flavor || item.color;
 
         return `
-        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-cream-soft rounded-4">
+        <div class="cart-item-card d-flex justify-content-between align-items-center mb-3 p-3 rounded-4">
             <div class="d-flex align-items-center gap-3">
                 <img src="${item.img}" class="rounded-3" style="width: 48px; height: 48px; object-fit: cover;">
                 <div>
-                    <div class="fw-bold small">${item.name}</div>
+                    <div class="fw-bold small cart-item-title">${item.name}</div>
                     ${itemFlavor ? `<span class="badge bg-dark text-white me-1">${itemFlavor}</span>` : ""}
-                    <small class="text-muted">${item.price} EGP</small>
+                    <small class="text-muted cart-item-price">${item.price} EGP</small>
                 </div>
             </div>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-dark rounded-circle px-2" onclick="window.updateQty('${key}', -1)">-</button>
-                <span class="mx-3 fw-bold">${item.qty}</span>
-                <button class="btn btn-sm btn-outline-dark rounded-circle px-2" onclick="window.updateQty('${key}', 1)">+</button>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm qty-btn rounded-circle" onclick="window.updateQty('${key}', -1)" aria-label="Decrease quantity">-</button>
+                <span class="mx-1 fw-bold qty-number">${item.qty}</span>
+                <button class="btn btn-sm qty-btn rounded-circle" onclick="window.updateQty('${key}', 1)" aria-label="Increase quantity">+</button>
             </div>
         </div>`;
       })
       .join("");
 
-    totalEl.innerText = total.toLocaleString();
+    if (totalEl) totalEl.innerText = total.toLocaleString();
 
     if (savingsBadge) {
       if (totalSavings > 0) {
@@ -622,16 +682,22 @@ window.openCheckout = () => {
       }
     }
   }
+}
 
-  new bootstrap.Modal(document.getElementById("cartModal")).show();
+// Open Cart Modal
+window.openCheckout = () => {
+  renderCartContent();
+  const cartModalInstance = getModalInstance("cartModal");
+  if (cartModalInstance) cartModalInstance.show();
 };
 
+// Update Quantity Without Re-opening Modal Backdrop
 window.updateQty = (key, change) => {
   if (!cart[key]) return;
   cart[key].qty += change;
   if (cart[key].qty <= 0) delete cart[key];
   updateUI();
-  window.openCheckout();
+  renderCartContent();
 };
 
 function updateUI() {
@@ -726,7 +792,7 @@ window.openWishlistModal = () => {
     container.innerHTML = items
       .map(
         (p) => `
-      <div class="d-flex justify-content-between align-items-center p-3 bg-cream-soft rounded-4">
+      <div class="wishlist-item-card d-flex justify-content-between align-items-center p-3 rounded-4 mb-2">
           <div class="d-flex align-items-center gap-3">
               <img src="${p.img}" class="rounded-3" style="width: 48px; height: 48px; object-fit: cover;">
               <div>
@@ -740,7 +806,9 @@ window.openWishlistModal = () => {
       )
       .join("");
   }
-  new bootstrap.Modal(document.getElementById("wishlistModal")).show();
+
+  const wishlistModalInstance = getModalInstance("wishlistModal");
+  if (wishlistModalInstance) wishlistModalInstance.show();
 };
 
 window.toggleWishlist = (id, event) => {
@@ -769,7 +837,7 @@ function renderRecentlyViewed() {
   container.innerHTML = items
     .map(
       (p) => `
-    <div class="card border-0 bg-cream-soft p-2 flex-shrink-0" style="width: 130px; cursor: pointer;" onclick="window.openProductModal('${p.id}')">
+    <div class="card border-0 product-sub-card p-2 flex-shrink-0" style="width: 130px; cursor: pointer;" onclick="window.openProductModal('${p.id}')">
       <img src="${p.img}" loading="lazy" class="rounded-3 mb-2" style="width: 100%; height: 95px; object-fit: cover;">
       <div class="fw-bold small text-truncate text-center">${p.name}</div>
       <div class="small text-muted text-center">${p.price} EGP</div>
@@ -788,18 +856,145 @@ if (cartModalEl) {
     mapInstance = L.map("delivery-map").setView(center, 12);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(mapInstance);
     mapMarker = L.marker(center, { draggable: true }).addTo(mapInstance);
-    mapMarker.on("dragend", () => {
-      const pos = mapMarker.getLatLng();
-      selectedCoords = { lat: pos.lat.toFixed(5), lng: pos.lng.toFixed(5) };
+
+    function updateSelectedCoords(lat, lng) {
+      selectedCoords = { lat: Number(lat.toFixed(5)), lng: Number(lng.toFixed(5)) };
+      hasPinnedLocation = true;
       const addressInput = document.getElementById("selectedAddress");
       if (addressInput) {
         addressInput.value = `Lat: ${selectedCoords.lat}, Lng: ${selectedCoords.lng}`;
       }
+    }
+
+    mapMarker.on("dragend", () => {
+      const pos = mapMarker.getLatLng();
+      updateSelectedCoords(pos.lat, pos.lng);
+    });
+
+    mapInstance.on("click", (e) => {
+      mapMarker.setLatLng(e.latlng);
+      updateSelectedCoords(e.latlng.lat, e.latlng.lng);
     });
   });
 }
 
-// Confirming Orders to Firebase
+/* =========================================================================
+   "MY ORDERS" - LOCAL ORDER HISTORY + CANCELLATION
+   ========================================================================= */
+const MY_ORDERS_KEY = "myOrders";
+const MAX_SAVED_ORDERS = 30;
+
+function getMyOrders() {
+  return JSON.parse(localStorage.getItem(MY_ORDERS_KEY) || "[]");
+}
+
+function rememberMyOrder(orderId, snapshot) {
+  const list = getMyOrders();
+  list.unshift({ id: orderId, ...snapshot });
+  localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(list.slice(0, MAX_SAVED_ORDERS)));
+  updateMyOrdersBadge();
+}
+
+function forgetMyOrder(orderId) {
+  const list = getMyOrders().filter((o) => o.id !== orderId);
+  localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(list));
+}
+
+const STATUS_LABELS = {
+  pending: { label: "Waiting for a branch to accept", className: "bg-warning text-dark" },
+  preparing: { label: "Being prepared", className: "bg-info text-dark" },
+  out_for_delivery: { label: "Out for delivery", className: "bg-primary" },
+  delivered: { label: "Delivered", className: "bg-success" },
+  cancelled: { label: "Cancelled", className: "bg-secondary" },
+  unassigned: { label: "No branch available", className: "bg-danger" },
+};
+
+async function updateMyOrdersBadge() {
+  const badge = document.getElementById("my-orders-count");
+  if (!badge) return;
+  const saved = getMyOrders();
+  if (saved.length === 0) {
+    badge.style.display = "none";
+    return;
+  }
+  const statuses = await Promise.all(saved.map((o) => get(ref(db, "orders/" + o.id + "/status"))));
+  const activeCount = statuses.filter((s) => {
+    const val = s.val();
+    return val && val !== "delivered" && val !== "cancelled" && val !== "unassigned";
+  }).length;
+  badge.innerText = activeCount;
+  badge.style.display = activeCount > 0 ? "inline-block" : "none";
+}
+
+window.openMyOrdersModal = async () => {
+  const container = document.getElementById("my-orders-list");
+  const saved = getMyOrders();
+
+  if (saved.length === 0) {
+    container.innerHTML = `<p class="text-center text-muted py-4 mb-0">You haven't placed any orders on this device yet.</p>`;
+  } else {
+    container.innerHTML = `<p class="text-center text-muted py-4 mb-0"><span class="spinner-border spinner-border-sm me-2"></span>Loading your orders...</p>`;
+
+    const rows = await Promise.all(
+      saved.map(async (savedOrder) => {
+        const snap = await get(ref(db, "orders/" + savedOrder.id));
+        return { saved: savedOrder, live: snap.val() };
+      })
+    );
+
+    container.innerHTML = rows
+      .map(({ saved, live }) => {
+        if (!live) {
+          return `
+          <div class="order-card p-3 rounded-4 d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <div class="fw-bold small store-name">Order from ${saved.time || ""}</div>
+              <div class="small text-muted">This order record is no longer available.</div>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="window.dismissMyOrder('${saved.id}')">Remove</button>
+          </div>`;
+        }
+
+        const statusInfo = STATUS_LABELS[live.status] || { label: live.status || "Unknown", className: "bg-secondary" };
+        const canCancel = live.status === "pending" || live.status === "preparing";
+        const showCode = live.status !== "delivered" && live.status !== "cancelled" && live.status !== "unassigned";
+
+        return `
+        <div class="order-card p-3 rounded-4 mb-2">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div class="fw-bold small store-name">${live.assignedStoreName || "Store"}</div>
+              <div class="small text-muted order-date">${live.time || ""}</div>
+            </div>
+            <span class="badge ${statusInfo.className} rounded-pill">${statusInfo.label}</span>
+          </div>
+          <div class="small mb-2 order-items">${live.items || ""}</div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold small order-total">${live.total ?? 0} EGP</span>
+            ${showCode ? `<span class="small">Code: <span class="delivery-code-badge" style="font-family:monospace; letter-spacing:2px; font-weight:700; background:#2D2926; color:#D4AF37; border-radius:8px; padding:2px 8px;">${live.deliveryCode || "----"}</span></span>` : ""}
+          </div>
+          ${canCancel ? `<button class="btn btn-sm btn-outline-danger rounded-pill w-100 mt-2" onclick="window.cancelMyOrder('${saved.id}')">Cancel Order</button>` : ""}
+        </div>`;
+      })
+      .join("");
+  }
+
+  const myOrdersModalInstance = getModalInstance("myOrdersModal");
+  if (myOrdersModalInstance) myOrdersModalInstance.show();
+};
+
+window.cancelMyOrder = async (orderId) => {
+  if (!confirm("Cancel this order? This can't be undone.")) return;
+  await update(ref(db, "orders/" + orderId), { status: "cancelled", cancelledAt: Date.now() });
+  window.openMyOrdersModal();
+  updateMyOrdersBadge();
+};
+
+window.dismissMyOrder = (orderId) => {
+  forgetMyOrder(orderId);
+  window.openMyOrdersModal();
+};
+
 window.confirmOrder = async () => {
   const nameInput = document.getElementById("name");
   const phoneInput = document.getElementById("phone");
@@ -810,6 +1005,25 @@ window.confirmOrder = async () => {
   const address = addressInput ? addressInput.value.trim() : "";
 
   if (!name || !phone || Object.keys(cart).length === 0) return alert("Please fill in your name, phone number, and add items to your cart!");
+
+  if (!hasPinnedLocation) {
+    const proceedAnyway = confirm(
+      "You haven't set your delivery location on the map yet, so we can't tell which branch is closest to you. Place the pin on the map for accurate delivery, or press OK to continue with an approximate location."
+    );
+    if (!proceedAnyway) return;
+  }
+
+  // Nearest-store routing (Haversine)
+  const custLat = Number(selectedCoords.lat);
+  const custLng = Number(selectedCoords.lng);
+  const routingQueue = buildRoutingQueue(custLat, custLng);
+
+  if (routingQueue.length === 0) {
+    return alert("Sorry, no stores are currently online to accept your order. Please try again shortly!");
+  }
+
+  const nearest = routingQueue[0];
+  const deliveryCode = generateDeliveryCode();
 
   const orderData = {
     custName: name,
@@ -824,23 +1038,45 @@ window.confirmOrder = async () => {
       .join(", "),
     total: Object.values(cart).reduce((a, b) => a + b.price * b.qty, 0),
     time: new Date().toLocaleString("en-EG"),
+    timestamp: Date.now(),
+
+    status: "pending",
+    deliveryCode: deliveryCode,
+    routingQueue: routingQueue.map((s) => ({ id: s.id, name: s.name })),
+    routingIndex: 0,
+    assignedStoreId: nearest.id,
+    assignedStoreName: nearest.name,
+    assignedAt: Date.now(),
+    driverId: null,
+    driverName: null,
   };
 
-  await push(ref(db, "orders"), orderData);
+  const pushResult = await push(ref(db, "orders"), orderData);
+  const orderId = pushResult.key;
+  rememberMyOrder(orderId, { time: orderData.time, storeName: nearest.name, total: orderData.total });
 
-  const modalEl = document.getElementById("cartModal");
-  if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
-
-  const successToast = document.getElementById("successToast");
-  if (successToast) successToast.classList.add("show-success");
+  const cartModalInstance = getModalInstance("cartModal");
+  if (cartModalInstance) cartModalInstance.hide();
 
   cart = {};
   updateUI();
-  setTimeout(() => location.reload(), 2500);
+
+  showOrderSuccess(nearest.name, deliveryCode);
 };
 
-// WhatsApp Order Direct Forwarding
-window.orderViaWhatsApp = () => {
+// Shows the assigned branch + delivery confirmation code
+function showOrderSuccess(storeName, code) {
+  const storeEl = document.getElementById("order-success-store");
+  const codeEl = document.getElementById("order-success-code");
+  if (storeEl) storeEl.innerText = storeName;
+  if (codeEl) codeEl.innerText = code;
+
+  const successModalInstance = getModalInstance("orderSuccessModal");
+  if (successModalInstance) successModalInstance.show();
+}
+
+// WhatsApp Order Forwarding
+window.orderViaWhatsApp = async () => {
   const nameInput = document.getElementById("name");
   const phoneInput = document.getElementById("phone");
   const addressInput = document.getElementById("selectedAddress");
@@ -851,6 +1087,19 @@ window.orderViaWhatsApp = () => {
 
   if (!name || !phone || Object.keys(cart).length === 0) return alert("Please fill in your name, phone number, and add items to your cart!");
 
+  if (!hasPinnedLocation) {
+    const proceedAnyway = confirm(
+      "You haven't set your delivery location on the map yet, so we can't tell which branch is closest to you. Place the pin on the map for accurate delivery, or press OK to continue with an approximate location."
+    );
+    if (!proceedAnyway) return;
+  }
+
+  const custLat = Number(selectedCoords.lat);
+  const custLng = Number(selectedCoords.lng);
+  const routingQueue = buildRoutingQueue(custLat, custLng);
+  const nearest = routingQueue[0];
+  const deliveryCode = generateDeliveryCode();
+
   const itemsList = Object.values(cart)
     .map((i) => {
       const itemFlavor = i.flavor || i.color;
@@ -860,6 +1109,39 @@ window.orderViaWhatsApp = () => {
 
   const total = Object.values(cart).reduce((a, b) => a + b.price * b.qty, 0);
 
-  const text = `New Order from Supermarket Store\n\nName: ${name}\nPhone: ${phone}\nLocation: ${address}\n\nItems:\n${itemsList}\n\nTotal: ${total} EGP`;
+  if (nearest) {
+    const orderData = {
+      custName: name,
+      custPhone: "+20" + phone,
+      custLocation: address,
+      coords: selectedCoords,
+      items: Object.values(cart)
+        .map((i) => {
+          const itemFlavor = i.flavor || i.color;
+          return `${i.qty}x ${i.name}${itemFlavor ? ` (${itemFlavor})` : ""}`;
+        })
+        .join(", "),
+      total,
+      time: new Date().toLocaleString("en-EG"),
+      timestamp: Date.now(),
+      status: "pending",
+      deliveryCode,
+      routingQueue: routingQueue.map((s) => ({ id: s.id, name: s.name })),
+      routingIndex: 0,
+      assignedStoreId: nearest.id,
+      assignedStoreName: nearest.name,
+      assignedAt: Date.now(),
+      driverId: null,
+      driverName: null,
+      viaWhatsApp: true,
+    };
+    const pushResult = await push(ref(db, "orders"), orderData);
+    rememberMyOrder(pushResult.key, { time: orderData.time, storeName: nearest.name, total });
+  }
+
+  const codeLine = nearest ? `\n\nYour Delivery Code: ${deliveryCode}\n(Give this code to the delivery driver on arrival)` : "";
+  const text = `New Order from Supermarket Store\n\nName: ${name}\nPhone: ${phone}\nLocation: ${address}\n\nItems:\n${itemsList}\n\nTotal: ${total} EGP${codeLine}`;
   window.open(`https://wa.me/201208009551?text=${encodeURIComponent(text)}`, "_blank");
+
+  if (nearest) showOrderSuccess(nearest.name, deliveryCode);
 };

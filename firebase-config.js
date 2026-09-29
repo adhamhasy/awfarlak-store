@@ -1,10 +1,12 @@
 // firebase-config.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getDatabase,
   ref,
   push,
   set,
+  update,
+  get,
   onValue,
   remove,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -35,9 +37,9 @@ const firebaseConfig = {
 
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (guarded so re-importing this file never double-initializes)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const storage = getStorage(app);
 
-export { db, ref, push, set, onValue, remove, storage, storageRef, uploadBytes, getDownloadURL };
+export { db, ref, push, set, update, get, onValue, remove, storage, storageRef, uploadBytes, getDownloadURL };

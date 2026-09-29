@@ -6,6 +6,11 @@
     --text-dark: #2D2926;
     --accent-color: #8C6D53;
     --border-color: #EFE8DE;
+    --card-bg: #ffffff;
+    /* --ink is a fixed near-black used for intentionally-dark UI chips (buttons,
+       active swatches, toasts). Unlike --text-dark, it does NOT change in dark
+       mode - those elements are dark-on-purpose in both themes. */
+    --ink: #2D2926;
 }
 
 * {
@@ -229,4 +234,294 @@ body {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
     }
+}
+/* =========================================================
+   1. CSS THEME VARIABLES (Light & Dark Mode)
+   ========================================================= */
+:root {
+  /* Light Mode Defaults */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f8f9fa;
+  --bg-input: #e9ecef;
+  
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  
+  --border-color: #e2e8f0;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  --btn-add-bg: #1e293b;
+  --btn-add-text: #ffffff;
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"],
+body.dark-mode {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-card: #242424;
+  --bg-card-subtle: #2d2d2d;
+  --bg-input: #2a2a2a;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  
+  --border-color: #334155;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+
+  --btn-add-bg: #334155;
+  --btn-add-text: #ffffff;
+}
+
+/* =========================================================
+   2. GLOBAL BODY & CONTAINER STYLES
+   ========================================================= */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.modal-content,
+.offcanvas,
+.card {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color);
+}
+
+/* =========================================================
+   3. PRODUCT CARDS FIX (Screenshot 1)
+   ========================================================= */
+.product-card {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+}
+
+.product-card .product-title {
+  color: var(--text-primary) !important;
+}
+
+.product-card .star-rating {
+  color: #ffc107; /* Yellow filled stars */
+}
+
+.product-card .star-rating .star-empty {
+  color: var(--text-muted) !important;
+}
+
+.product-card .rating-count {
+  color: var(--text-secondary) !important;
+}
+
+.product-card .price {
+  color: var(--text-primary) !important;
+}
+
+.product-card .btn-add-bag {
+  background-color: var(--btn-add-bg) !important;
+  color: var(--btn-add-text) !important;
+  border: none;
+}
+
+/* =========================================================
+   4. BAG / CART ITEMS FIX (Screenshot 2)
+   ========================================================= */
+.cart-item,
+.bag-item {
+  background-color: var(--bg-card-subtle) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary) !important;
+  padding: 12px;
+}
+
+.cart-item .item-title,
+.cart-item .item-price,
+.cart-item-name,
+.cart-item-price {
+  color: var(--text-primary) !important;
+}
+
+.cart-item .quantity-btn,
+.qty-btn {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qty-number {
+  color: var(--text-primary) !important;
+}
+
+/* Checkout Summary Card Fix */
+.checkout-summary,
+.order-summary-box {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-primary) !important;
+}
+
+.checkout-summary .total-price,
+#cartTotal,
+#finalTotal {
+  color: var(--text-primary) !important;
+  font-weight: 700;
+}
+
+/* Form Inputs inside Checkout */
+.checkout-summary input,
+.checkout-summary select,
+.form-control {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.checkout-summary input::placeholder,
+.form-control::placeholder {
+  color: var(--text-secondary) !important;
+  opacity: 0.8;
+}
+
+/* =========================================================
+   5. MY ORDERS MODAL FIX (Screenshot 3)
+   ========================================================= */
+.order-card,
+.order-history-item {
+  background-color: var(--bg-card-subtle) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.order-card .store-name,
+.order-card .order-store {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+.order-card .order-date,
+.order-card .order-time {
+  color: var(--text-secondary) !important;
+}
+
+.order-card .order-items,
+.order-card .item-line {
+  color: var(--text-primary) !important;
+}
+
+.order-card .order-total {
+  color: var(--text-primary) !important;
+  font-weight: bold;
+}
+/* =========================================================
+   CHECKOUT SUMMARY CARD & TOTAL TEXT FIX
+   ========================================================= */
+
+/* Main Checkout Action Container */
+.checkout-summary,
+.order-summary,
+.cart-checkout-box,
+[class*="checkout-card"] {
+  background-color: var(--bg-card, #ffffff) !important;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  padding: 18px;
+  color: var(--text-primary, #1e293b);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure Total Price (e.g. "0 EGP") is Always Visible */
+.total-price,
+.cart-total,
+#cartTotal,
+#finalTotal,
+.checkout-summary h2,
+.checkout-summary h3,
+.checkout-summary div {
+  color: var(--text-primary, #1e293b) !important;
+  font-weight: 700;
+}
+
+/* Dark Mode Overrides for Checkout Summary */
+body.dark-mode .checkout-summary,
+body.dark-mode .order-summary,
+body.dark-mode .cart-checkout-box,
+[data-theme="dark"] .checkout-summary,
+[data-theme="dark"] .order-summary {
+  background-color: #242424 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .total-price,
+body.dark-mode #cartTotal,
+body.dark-mode #finalTotal,
+[data-theme="dark"] .total-price,
+[data-theme="dark"] #cartTotal,
+[data-theme="dark"] #finalTotal {
+  color: #ffffff !important;
+}
+
+/* Savings Badge ("You save X EGP") */
+.savings-badge,
+.discount-banner {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+/* Prevent button hover states from adding stacked dark filters */
+.qty-btn,
+.btn-qty,
+.quantity-btn {
+  background-color: var(--bg-card-subtle, #f1f5f9) !important;
+  color: var(--text-primary, #1e293b) !important;
+  border: 1px solid var(--border-color, #cbd5e1) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  filter: none !important; /* Prevents brightness filter darkening on multiple clicks */
+}
+
+.qty-btn:active,
+.btn-qty:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+/* Dark Cart Checkout Container */
+#cartModal .modal-footer,
+.cart-checkout-box,
+.cart-footer {
+  background-color: #1e1e1e !important; /* Dark container background */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 24px;
+  color: #ffffff !important;
+}
+
+/* Total Price Text Visibility */
+#cartModal .cart-total-display,
+#cartModal #total-price,
+#cartModal .total-text {
+  color: #ffffff !important;
+  font-weight: 700;
 }
