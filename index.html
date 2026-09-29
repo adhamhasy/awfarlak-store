@@ -84,7 +84,7 @@
                     <!-- Brand & Delivery (Left) -->
                     <div class="d-flex align-items-center gap-3">
                         <a class="navbar-brand fw-bold text-uppercase tracking-wider text-dark m-0" href="#" data-i18n="brand">
-                            Supermarket
+                            awfarlak
                         </a>
                         
                         <div class="d-none d-md-flex align-items-center text-dark" style="font-size: 0.85rem; cursor: pointer;" onclick="window.openCheckout()">
@@ -369,7 +369,7 @@
                     maxPrice: "Max Price (EGP)", reset: "Reset", apply: "Apply", searchPlace: "Search products..."
                 },
                 ar: {
-                    brand: "سوبر ماركت", deliverTo: "التوصيل إلى", selectSpot: "اختر موقع التوصيل",
+                    brand: "اوفرلك", deliverTo: "التوصيل إلى", selectSpot: "اختر موقع التوصيل",
                     sort: "ترتيب", filter: "تصفية", heroBadge: "عروض السوبر ماركت اليومية",
                     heroTitle: "بقالتك ومتجرك اليومي", 
                     heroSub: "تسوق الأساسيات اليومية، والسلع المعبأة، والعناصر اليومية تصلك بسرعة.",
@@ -388,7 +388,7 @@
             function applyTranslation() {
                 // Set RTL/LTR and update Bootstrap input group layout orientation natively
                 document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-                langBtn.innerText = currentLang === 'ar' ? 'English' : 'عربي';
+                langBtn.innerText = currentLang === 'ar' ? 'EN' : 'AR';
 
                 // Translate Static UI Elements
                 document.querySelectorAll('[data-i18n]').forEach(el => {
